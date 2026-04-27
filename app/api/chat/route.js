@@ -388,6 +388,14 @@ You could NOT access the full content of this link. Acknowledge only the title a
         : "\n\nNo recommendations captured yet.");
 
     // Build the system prompt based on mode
+    const today = new Date().toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+    const dateHeader = `Today is ${today}. Use this when the curator references "this year," "lately," "recent," or asks about timing.\n\n`;
+
     let systemPrompt;
     let inviterCtx = { inviterName: null, inviterHandle: null, inviterNote: null };
     if (isVisitor) {
@@ -426,7 +434,13 @@ You could NOT access the full content of this link. Acknowledge only the title a
           .eq('profile_id', profileId)
           .single();
         if (tasteProfile?.content) {
-          tasteProfileBlock = `\n\nCURATOR'S TASTE PROFILE:\n${tasteProfile.content}`;
+          tasteProfileBlock = `\n\n=== CURATOR REFERENCE DOCUMENT ===
+The following document was generated separately to summarize this curator's recs and patterns. Use it as factual reference: who they are, what they have saved, what domains they cover, how they communicate.
+Do NOT mirror its verdict-shaped voice in your responses. Do NOT restate its thesis at them. The document is for your context only. Your responses follow the charter and skill files, not the document's voice.
+
+${tasteProfile.content}
+
+=== END REFERENCE DOCUMENT ===`;
         }
       } catch (err) {
         console.error('Failed to fetch taste profile:', err);
@@ -435,7 +449,7 @@ You could NOT access the full content of this link. Acknowledge only the title a
       inviterCtx = await getInviterContext(profileId);
       // Taste read turns: skip network context — pure content analysis only.
       const onboardingNetworkContext = (profileId && !tasteReadUrl) ? await getSubscribedRecs(profileId) : '';
-      systemPrompt = buildOnboardingPrompt({
+      systemPrompt = dateHeader + buildOnboardingPrompt({
         curatorName,
         inviterName: inviterCtx.inviterName,
         inviterHandle: inviterCtx.inviterHandle,
@@ -454,7 +468,13 @@ You could NOT access the full content of this link. Acknowledge only the title a
           .eq('profile_id', profileId)
           .single();
         if (tasteProfile?.content) {
-          tasteProfileBlock = `\n\nCURATOR'S TASTE PROFILE:\n${tasteProfile.content}`;
+          tasteProfileBlock = `\n\n=== CURATOR REFERENCE DOCUMENT ===
+The following document was generated separately to summarize this curator's recs and patterns. Use it as factual reference: who they are, what they have saved, what domains they cover, how they communicate.
+Do NOT mirror its verdict-shaped voice in your responses. Do NOT restate its thesis at them. The document is for your context only. Your responses follow the charter and skill files, not the document's voice.
+
+${tasteProfile.content}
+
+=== END REFERENCE DOCUMENT ===`;
         }
       } catch (err) {
         console.error('Failed to fetch taste profile:', err);
@@ -462,7 +482,7 @@ You could NOT access the full content of this link. Acknowledge only the title a
 
       // Taste read turns: skip network context — pure content analysis only.
       const networkContext = (profileId && !tasteReadUrl) ? await getSubscribedRecs(profileId) : '';
-      systemPrompt = buildStandardPrompt({
+      systemPrompt = dateHeader + buildStandardPrompt({
         curatorName,
         curatorHandle: curatorHandle || '',
         curatorProfile: { bio: curatorBio, location: '' },

@@ -125,7 +125,7 @@ Respond with JSON only, no markdown code fences:
     "primary_moods": ["mood 1", "mood 2"],
     "genres": [],
     "contexts": ["gifting", "lifestyle"],
-    "taste_thesis": "2-3 sentence thesis about what this article reveals about the curator's taste. Be specific — reference actual items from the article."
+    "taste_thesis": "2-3 sentence thesis about what this article reveals about the curator's taste. Reference actual items from the article. Avoid generic genre descriptors."
   }
 }`;
   }
@@ -206,7 +206,7 @@ Respond with JSON only, no markdown code fences. Use this exact structure:
     "primary_moods": ["mood 1", "mood 2"],
     "genres": ["genre 1", "genre 2"],
     "contexts": ["when/where they consume this — commuting, cooking, etc."],
-    "taste_thesis": "A 2-3 sentence thesis about this curator's taste across ALL content types found. Be specific and insightful, not generic. Reference the actual mix of content."
+    "taste_thesis": "A 2-3 sentence thesis about this curator's taste across ALL content types found. Reference specific items from the actual mix of content. Avoid generic genre descriptors."
   }
 }
 
