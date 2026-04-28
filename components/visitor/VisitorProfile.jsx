@@ -273,7 +273,7 @@ export default function VisitorProfile({ mode }) {
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontFamily: F, fontSize: 13, fontWeight: 600, color: T.ink }}>Ask {firstName}'s AI</div>
-          <div style={{ fontFamily: F, fontSize: 11, color: T.ink2, marginTop: 1 }}>Knows their taste across {publicItems.length} recs</div>
+          <div style={{ fontFamily: F, fontSize: 11, color: T.ink2, marginTop: 1 }}>Knows their perspective across {publicItems.length} recommendations</div>
         </div>
         <span style={{ fontSize: 16, color: T.acc, flexShrink: 0 }}>{"\u2192"}</span>
       </div>
@@ -299,7 +299,7 @@ export default function VisitorProfile({ mode }) {
             Ask {firstName}'s AI
           </div>
           <div style={{ fontFamily: F, fontSize: 11, color: T.ink2, lineHeight: 1.5, marginBottom: 16 }}>
-            Knows their taste across {publicItems.length} recs
+            Knows their perspective across {publicItems.length} recommendations
           </div>
           <div style={{
             width: "100%", padding: "10px 14px", background: T.acc, borderRadius: 10,

@@ -71,7 +71,7 @@ const hasValidLink = (links) => (links || []).some(l => isSpecificLink(l.url));
 
 export default function ChatView({ variant }) {
   const router = useRouter();
-  const { profile, setProfile, profileId, isFirstTime, tasteItems, messages, setMessages, dbLoaded, prevMsgCount, addRec, saveMsgToDb, saveProfileFromChat, isOwner } = useCurator();
+  const { profile, setProfile, profileId, isFirstTime, tasteItems, messages, setMessages, dbLoaded, prevMsgCount, addRec, saveMsgToDb, saveProfileFromChat, isOwner, signalCount } = useCurator();
   const [input, setInput] = useState("");
   const [typing, setTyping] = useState(false);
   const [pendingLink, setPendingLink] = useState(null);
@@ -362,9 +362,9 @@ Acknowledge the save briefly, then ask one curious question.]`;
         : topTags.length === 2 ? `${topTags[0]} and ${topTags[1]}`
         : `${topTags[0]}, ${topTags[1]}, and ${topTags[2]}`;
 
-      const styleLine = `Ask me anything about ${profile.name}'s taste.`;
+      const styleLine = `Ask me anything about ${profile.name}'s perspective.`;
 
-      setMessages([{ role: "ai", text: `I'm ${profile.name}'s taste AI, trained on recommendations across ${catStr}. ${styleLine}` }]);
+      setMessages([{ role: "ai", text: `I'm ${profile.name}'s Lens AI, trained on recommendations and inferences across ${catStr}. ${styleLine}` }]);
     }
   }, [isCurator, profile, dbLoaded]);
 
@@ -1357,7 +1357,7 @@ Acknowledge the save briefly, then ask one curious question.]`;
             <div style={{ fontFamily: S, fontSize: 17, color: T.ink, fontWeight: 400, lineHeight: 1 }}>{profile.name}'s AI</div>
             <div style={{ fontSize: 11, color: T.ink3, fontFamily: F, marginTop: 3, display: "flex", alignItems: "center", gap: 5 }}>
               <div style={{ width: 5, height: 5, borderRadius: 3, background: T.acc, animation: "breathe 3s ease-in-out infinite" }} />
-              Trained on {n} personal recs
+              Trained on {n} personal recommendations{signalCount > 0 ? ` and ${signalCount} signals` : ""}
             </div>
           </div>
         </div>
@@ -1393,13 +1393,10 @@ Acknowledge the save briefly, then ask one curious question.]`;
       </div>
       <div style={{ padding: "4px 16px 6px", display: "flex", gap: 6, overflowX: "auto", flexShrink: 0, maxWidth: "100%" }}>
         {[
-          { label: "\uD83C\uDFA7 Radio", prompt: "Play me a radio station from the listen recs" },
-          { label: "\u2728 Newest", prompt: "What are the newest recommendations?" },
-          { label: "\uD83D\uDD25 Most Popular", prompt: "What are the most popular picks?" },
-          { label: "\uD83D\uDCFA Watch", prompt: "What should I watch?" },
-          { label: "\uD83C\uDFA7 Listen", prompt: "What should I listen to?" },
-          { label: "\uD83D\uDCC4 Read", prompt: "What should I read?" },
-          { label: "\uD83D\uDCCD Visit", prompt: "What places should I visit?" },
+          { label: "\uD83D\uDCFA Watch", prompt: "What do they recommend I watch?" },
+          { label: "\uD83C\uDFA7 Listen", prompt: "What do they recommend I listen to?" },
+          { label: "\uD83D\uDCC4 Read", prompt: "What do they recommend I read?" },
+          { label: "\uD83D\uDCCD Visit", prompt: "Where do they recommend I visit?" },
         ].map(chip => (
           <button key={chip.label} onClick={() => setInput(chip.prompt)} style={{
             padding: "8px 14px", borderRadius: 20, border: `1px solid ${V.chipBdr}`, background: V.chip,
