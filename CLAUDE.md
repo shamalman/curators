@@ -1,5 +1,5 @@
 # CLAUDE.md — Curators.AI Engineering Guide
-## Last updated: April 27, 2026 (Record purpose work: taste profile prompt rewrite + auth gate on /api/generate-taste-profile + LENS-003 lazy-init shipped)
+## Last updated: April 28, 2026 (ONBOARD-001 shipped: mutual auto-subscription on invite redemption + subscriptions.source column + sendNewSubscriberEmail lib)
 
 ---
 
@@ -286,7 +286,26 @@ Curator-only audit trail at `/me/timeline`. Shows every signal that shaped the t
 
 ### Inviter Pipe & Auto-subscribe
 
-`getInviterContext` in `lib/chat/inviter-context.js` — three independent `.maybeSingle()` lookups so one failure doesn't wipe the rest. Auto-subscribe route: `app/api/onboarding/auto-subscribe/route.js` — service-role, idempotent, race-safe (treats `23505` as success), non-blocking.
+`getInviterContext` in `lib/chat/inviter-context.js` — three independent `.maybeSingle()` lookups so one failure doesn't wipe the rest.
+
+**Invite redemption — mutual auto-subscription** (ONBOARD-001, shipped April 28, 2026):
+
+`app/api/onboarding/auto-subscribe/route.js` is service-role, idempotent, and race-safe (treats `23505` as success). On every successful invite redemption it writes TWO rows:
+- Row 1 (forward): invitee → inviter (`subscriber_id=newProfileId, curator_id=inviterId`)
+- Row 2 (reverse): inviter → invitee (`subscriber_id=inviterId, curator_id=newProfileId`)
+
+Both rows tagged `source='invite'`. The `subscriptions.source` column (added Deploy A, default `'manual'`) is the discriminator — manual subs from `CuratorContext.subscribe()` and `VisitorProfile` rely on the default; only this route writes `'invite'`.
+
+Edge cases:
+- **Null inviterId** (legacy `CURATORS-ALPHA-*` codes have `created_by=null`): soft-skip with `[AUTO_SUBSCRIBE_NULL_INVITER]` log, returns 200 `{ success: true, skipped: true, reason: 'no_inviter' }`. No rows, no emails.
+- **Reverse-direction failure**: forward failure is a hard 500 — primary direction is critical. Reverse failure logs `[AUTO_SUBSCRIBE_REVERSE_FAIL]` with full context but does NOT roll back the forward row. Response: `{ success: true, both_directions: false }`.
+- **Reactivation preserves `source`** (first-origin semantics): if the row already exists with `unsubscribed_at` set, the route clears `unsubscribed_at` and updates `subscribed_at` but leaves `source` untouched. A manual sub later re-activated via invite stays `source='manual'`.
+
+Notification emails fire only on real state transitions — `created`, `reactivated`, `exists_race`. NOT on `exists` (already-active row), which logs `[AUTO_SUBSCRIBE_EMAIL_SKIP] reason=already_subscribed`. Emails are awaited via `Promise.allSettled`; per-result outcomes log `[AUTO_SUBSCRIBE_EMAIL_SENT|FAIL|SKIP]` with direction (`to_inviter` / `to_invitee`).
+
+**Canonical email-send path:** `lib/email/sendNewSubscriberEmail.js`. The `/api/notify/new-subscriber` route is a thin wrapper around it for the manual-subscribe path (keeps its session + ownership checks). Both the auto-subscribe route and the manual-subscribe route call the lib for the Resend send and the `notification_log` insert — never duplicate that logic in a route.
+
+**Invite code casing — load-bearing:** `generateCode()` in `app/api/invite/route.js` uses an uppercase-only alphabet (`ABCDEFGHJKLMNPQRSTUVWXYZ23456789`), so app-generated codes are all-upper by contract. The signup form uppercases typed input (input handler + submit) and uses case-sensitive `.eq("code", ...)`. Hand-rolled SQL inserts MUST respect this — always `UPPER()` any hex suffix when inserting test codes, or signup will silently reject with "Invalid or already used invite code". Caused a debug detour during ONBOARD-001 end-to-end testing on 2026-04-28.
 
 ---
 
