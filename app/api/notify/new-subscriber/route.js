@@ -1,9 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
-import { resend } from '@/lib/resend';
-import { generateEmailToken } from '@/lib/email-tokens';
-import { newSubscriberEmail } from '@/lib/email-templates';
+import { sendNewSubscriberEmail } from '@/lib/email/sendNewSubscriberEmail';
 
 function getServiceClient() {
   return createClient(
@@ -48,84 +46,21 @@ export async function POST(request) {
       return new Response(JSON.stringify({ error: 'Forbidden' }), { status: 403 });
     }
 
-    // Get curator profile
-    const { data: curator, error: curatorErr } = await supabase
-      .from('profiles')
-      .select('id, name, handle, auth_user_id, new_subscriber_email_enabled')
-      .eq('id', curatorId)
-      .single();
-
-    if (curatorErr || !curator) {
-      console.error('Curator not found:', curatorErr);
-      return new Response(JSON.stringify({ error: 'Curator not found' }), { status: 404 });
-    }
-
-    // Check if notifications are enabled
-    if (curator.new_subscriber_email_enabled === false) {
-      return new Response(JSON.stringify({ skipped: true, reason: 'notifications_disabled' }));
-    }
-
-    // Get curator email from auth
-    const { data: { user }, error: authErr } = await supabase.auth.admin.getUserById(curator.auth_user_id);
-    if (authErr || !user?.email) {
-      console.error('Failed to get curator email:', authErr);
-      return new Response(JSON.stringify({ error: 'Could not get curator email' }), { status: 500 });
-    }
-
-    // Get subscriber profile
-    const { data: subscriber } = await supabase
-      .from('profiles')
-      .select('id, name, handle')
-      .eq('id', subscriberId)
-      .single();
-
-    const subscriberName = subscriber?.name || 'Someone';
-    const subscriberHandle = subscriber?.handle || null;
-
-    // Count total subscribers
-    const { count: subscriberCount } = await supabase
-      .from('subscriptions')
-      .select('id', { count: 'exact', head: true })
-      .eq('curator_id', curatorId)
-      .is('unsubscribed_at', null);
-
-    // Generate unsubscribe token
-    const unsubToken = await generateEmailToken(curator.id, 'unsubscribe', { type: 'new_subscriber_email' });
-    const unsubscribeUrl = `https://curators.ai/api/email-action?token=${unsubToken}`;
-
-    // Build email
-    const { subject, html, text } = newSubscriberEmail({
-      subscriberName,
-      subscriberHandle,
-      subscriberCount: subscriberCount || 0,
-      unsubscribeUrl,
+    const result = await sendNewSubscriberEmail({
+      curatorId,
+      subscriberId,
+      supabaseAdmin: supabase,
     });
 
-    // Send via Resend
-    const { error: sendErr } = await resend.emails.send({
-      from: 'Curators.AI <notifications@curators.ai>',
-      to: user.email,
-      subject,
-      html,
-      text,
-      headers: {
-        'List-Unsubscribe': `<${unsubscribeUrl}>`,
-        'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
-      },
-    });
-
-    if (sendErr) {
-      console.error('Resend send error:', sendErr);
-      return new Response(JSON.stringify({ error: 'Failed to send email' }), { status: 500 });
+    if (!result.ok) {
+      console.error('[notify/new-subscriber] error:', result.error, result.detail);
+      const status = result.error === 'curator_not_found' ? 404 : 500;
+      return new Response(JSON.stringify({ error: result.error }), { status });
     }
 
-    // Log to notification_log
-    await supabase.from('notification_log').insert({
-      type: 'new_subscriber',
-      recipient_id: curator.id,
-      recipient_email: user.email,
-      curator_id: subscriberId,
-    });
+    if (result.skipped) {
+      return new Response(JSON.stringify({ skipped: true, reason: result.reason }));
+    }
 
     return new Response(JSON.stringify({ sent: true }));
   } catch (err) {
