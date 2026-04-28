@@ -1,5 +1,5 @@
 # CLAUDE.md — Curators.AI Engineering Guide
-## Last updated: April 26, 2026 (Lens Charter + post-save fix + is_tester flag + chat route hygiene)
+## Last updated: April 27, 2026 (Record purpose: taste profile prompt rewrite + auth gate on /api/generate-taste-profile + LENS-003 lazy-init)
 
 ---
 
@@ -385,8 +385,8 @@ app/(curator)/me/taste/page.js             -- Personal Record (TasteFileView)
 app/api/chat/route.js                      -- mode detection, link handling, rec extraction
 lib/prompts/onboarding.js, standard.js     -- system prompt builders (both carry SUBSCRIPTION_GROUNDING_RULE)
 lib/prompts/loader.js                      -- loadSkill(name, aiProfile = 'stable'). No cache (removed 2026-04-21)
-lib/prompts/charter.md                     -- root charter placeholder (HTML comment, awaits charter approval)
-lib/prompts/skills/staging/                -- mirror of skills/, byte-identical until charter work begins
+lib/prompts/charter.md                     -- root charter placeholder (HTML comment, never read by loader; charter is staging-only)
+lib/prompts/skills/staging/                -- staging skill files. Charter (lens charter) loads first; 5 skills pruned during charter install (Apr 24-26)
 lib/chat/inviter-context.js                -- getInviterContext
 lib/chat/network-context.js                -- getSubscribedRecs + REC_LINK sentinel
 lib/chat/link-parsing.js                   -- distillForReinjection
@@ -437,3 +437,7 @@ Example recon queries the MCP can answer directly:
 - "List columns on rec_files"
 - "Count recs grouped by created_via in the last 30 days"
 - "Show me the 5 most recent rows in chat_messages"
+
+### Manual regen script (`scripts/regenerate-taste-profile.mjs`)
+
+Use directly without env-prefix workaround as of April 27, 2026 — `lib/taste-profile/generate.js` now lazy-instantiates the Anthropic client inside `generateTasteProfile`.
