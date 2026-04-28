@@ -12,6 +12,7 @@ export function VisitorProvider({ handle, children }) {
   const [messages, setMessages] = useState([]);
   const [dbLoaded, setDbLoaded] = useState(false);
   const [isOwner, setIsOwner] = useState(false);
+  const [signalCount, setSignalCount] = useState(0);
   const prevMsgCount = useRef(0);
 
   const loadVisitorData = useCallback(async () => {
@@ -84,6 +85,18 @@ export function VisitorProvider({ handle, children }) {
             };
           }));
         }
+
+        try {
+          const sigRes = await fetch(`/api/visitor/signals?profile_id=${prof.id}`);
+          if (sigRes.ok) {
+            const sigData = await sigRes.json();
+            setSignalCount(sigData.signal_count || 0);
+          } else {
+            console.warn("[VISITOR_SIGNALS_FETCH_ERROR] non-ok response:", sigRes.status);
+          }
+        } catch (sigErr) {
+          console.warn("[VISITOR_SIGNALS_FETCH_ERROR]", sigErr);
+        }
       }
       setDbLoaded(true);
     } catch (err) {
@@ -132,6 +145,7 @@ export function VisitorProvider({ handle, children }) {
       undoArchive,
       toggleVisibility,
       isOwner,
+      signalCount,
       refresh: loadVisitorData,
     }}>
       {children}
