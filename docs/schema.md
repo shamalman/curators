@@ -213,8 +213,9 @@ Notes: Append-only log of ignored inferences. curator-only (RLS). source_url lin
 | unsubscribed_at | timestamptz | YES |
 | digest_frequency | text | YES |
 | last_notified_at | timestamptz | YES |
+| source | text | YES |
 
-Notes: Account-holder subscriptions. Both columns → `profiles.id`.
+Notes: Account-holder subscriptions. Both columns → `profiles.id`. `source`: `'invite' | 'manual'`. Populated April 2026 via ONBOARD-001. `'invite'` indicates row was auto-created on invite redemption.
 
 ## subscribers
 | Column | Type | Nullable |
