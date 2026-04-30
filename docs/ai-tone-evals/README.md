@@ -69,3 +69,6 @@ against the chat API and diffs against expected patterns.
 
 - `pacquito-rec-capture.md`: standard mode, WHAT + framing +
   descriptor on turn 1, must offer save on turn 2
+- `no-artist-fabrication.md`: standard mode, AI must not invent artist or work names when parser output is partial.
+- `post-save-curiosity.md`: standard mode, post-save reflection is a short curious question, not a thesis or pattern verdict.
+- `post-save-no-verdict-followup.md`: standard mode, post-save follow-up question must not be verdict-shaped or drill the same domain twice in a row.
