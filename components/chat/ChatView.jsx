@@ -224,16 +224,34 @@ export default function ChatView({ variant }) {
         if (typedSinceSave.current) return;
         setTyping(true);
         try {
-          const reflectionMsg = `[SYSTEM: The curator just saved "${savedRec.title}" via quick capture. Their note: "${savedRec.context}". They now have ${recCount} total recs.
+          const reflectionMsg = `[SYSTEM: A rec was just saved. Respond with a brief acknowledgment plus exactly one short follow-up question. Hard constraints:
 
-Your task: a short post-save acknowledgment. Follow these rules strictly:
-- Max 2 sentences total, including the question. Exactly one question mark.
-- No verdicts about the curator. Do not say "you're drawn to," "you value," "you appreciate," "you curate for," "this shows," or any sentence that ends as a declaration about who they are.
-- No synthesis across multiple recs. Do not connect this rec to other recs in their Record. Do not weave a thesis. Do not say "from X to Y" or "this connects to your love for..."
-- No padding with examples that aren't in this saved rec's content. If you reference an artist, song, scene, or item, it must be from the saved rec itself or from the curator's own words this turn.
-- Pick one of three question patterns from the POST-SAVE MOMENT skill: adjacent artist/work, sideways open, or specific callback to a word the curator used this turn.
+- Max 2 sentences total.
+- Exactly one question mark.
+- No verdicts about the curator. Do not characterize what they like, hide, hoard, sit on, keep to themselves, gravitate toward, or are drawn to. Do not describe their taste in any form.
+- No synthesis across multiple recs. Do not reference other things they have saved.
+- No padding with examples that are not in the saved rec content.
+- No em dashes.
 
-Acknowledge the save briefly, then ask one curious question.]`;
+Pick ONE of these four follow-up moves, and bias AWAY from move A (it tends to feel like drilling):
+
+A. ADJACENT (same domain, different item): only if the curator has shown clear engagement in this exact lane in the last 2 turns. Example: they just saved a restaurant and have been actively talking about restaurants. "Anywhere else lately worth a save?"
+
+B. CROSS-CONTEXT (different city, different category, different mood): preferred default. Move them out of the lane they just finished. If they saved a Chicago restaurant, ask about food in another city OR food of a different vibe OR something completely outside food. "What about other cities, anywhere you have eaten lately that stuck?" "Outside food, anything else been on your mind to save?"
+
+C. SPECIFIC-CALLBACK to a detail in the curator's own why for THIS rec: only when their why contained a concrete hook you can point at without paraphrasing. Quote or near-quote their detail.
+
+D. NETWORK SURFACE (offer to show recs from their subscriptions): only when the network context block contains at least one rec from a curator they subscribe to that is plausibly relevant to what they just saved or to their stated interests. Phrase as an offer, never as a verdict. "Want to see what [Curator Name] has been saving lately?" Use the actual curator name from the network context. If no relevant subscribed rec is in context, do not use this move.
+
+BANNED phrasings (do not produce any sentence matching these patterns):
+- "What other [X] have you been keeping to yourself"
+- "What else are you sitting on"
+- "What are you holding back"
+- "What's hiding in your [X]"
+- "What's the [X] you have not told anyone about"
+- Any phrasing that implies the curator hoards, hides, gatekeeps, or has secrets.
+
+If you cannot produce a clean 2-sentence response that satisfies all constraints, produce only a one-sentence acknowledgment with no question. Silence is better than a banned pattern.]`;
           const res = await fetch('/api/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -847,16 +865,34 @@ Acknowledge the save briefly, then ask one curious question.]`;
       if (typedSinceSave.current) return;
       setTyping(true);
       try {
-        const reflectionMsg = `[SYSTEM: The curator just saved "${savedRec.title}". Their note: "${savedRec.context}". They now have ${recCount} total recs.
+        const reflectionMsg = `[SYSTEM: A rec was just saved. Respond with a brief acknowledgment plus exactly one short follow-up question. Hard constraints:
 
-Your task: a short post-save acknowledgment. Follow these rules strictly:
-- Max 2 sentences total, including the question. Exactly one question mark.
-- No verdicts about the curator. Do not say "you're drawn to," "you value," "you appreciate," "you curate for," "this shows," or any sentence that ends as a declaration about who they are.
-- No synthesis across multiple recs. Do not connect this rec to other recs in their Record. Do not weave a thesis. Do not say "from X to Y" or "this connects to your love for..."
-- No padding with examples that aren't in this saved rec's content. If you reference an artist, song, scene, or item, it must be from the saved rec itself or from the curator's own words this turn.
-- Pick one of three question patterns from the POST-SAVE MOMENT skill: adjacent artist/work, sideways open, or specific callback to a word the curator used this turn.
+- Max 2 sentences total.
+- Exactly one question mark.
+- No verdicts about the curator. Do not characterize what they like, hide, hoard, sit on, keep to themselves, gravitate toward, or are drawn to. Do not describe their taste in any form.
+- No synthesis across multiple recs. Do not reference other things they have saved.
+- No padding with examples that are not in the saved rec content.
+- No em dashes.
 
-Acknowledge the save briefly, then ask one curious question.]`;
+Pick ONE of these four follow-up moves, and bias AWAY from move A (it tends to feel like drilling):
+
+A. ADJACENT (same domain, different item): only if the curator has shown clear engagement in this exact lane in the last 2 turns. Example: they just saved a restaurant and have been actively talking about restaurants. "Anywhere else lately worth a save?"
+
+B. CROSS-CONTEXT (different city, different category, different mood): preferred default. Move them out of the lane they just finished. If they saved a Chicago restaurant, ask about food in another city OR food of a different vibe OR something completely outside food. "What about other cities, anywhere you have eaten lately that stuck?" "Outside food, anything else been on your mind to save?"
+
+C. SPECIFIC-CALLBACK to a detail in the curator's own why for THIS rec: only when their why contained a concrete hook you can point at without paraphrasing. Quote or near-quote their detail.
+
+D. NETWORK SURFACE (offer to show recs from their subscriptions): only when the network context block contains at least one rec from a curator they subscribe to that is plausibly relevant to what they just saved or to their stated interests. Phrase as an offer, never as a verdict. "Want to see what [Curator Name] has been saving lately?" Use the actual curator name from the network context. If no relevant subscribed rec is in context, do not use this move.
+
+BANNED phrasings (do not produce any sentence matching these patterns):
+- "What other [X] have you been keeping to yourself"
+- "What else are you sitting on"
+- "What are you holding back"
+- "What's hiding in your [X]"
+- "What's the [X] you have not told anyone about"
+- Any phrasing that implies the curator hoards, hides, gatekeeps, or has secrets.
+
+If you cannot produce a clean 2-sentence response that satisfies all constraints, produce only a one-sentence acknowledgment with no question. Silence is better than a banned pattern.]`;
         const res = await fetch('/api/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
