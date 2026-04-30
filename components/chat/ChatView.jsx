@@ -77,6 +77,7 @@ export default function ChatView({ variant }) {
   const [pendingLink, setPendingLink] = useState(null);
   const [editingCapture, setEditingCapture] = useState(null);
   const [captureLinkInputs, setCaptureLinkInputs] = useState({});
+  const [silentByMsgIndex, setSilentByMsgIndex] = useState({});
   const [pendingImage, setPendingImage] = useState(null);
   const imageInputRef = useRef(null);
   const [showScrollBtn, setShowScrollBtn] = useState(false);
@@ -832,6 +833,7 @@ If you cannot produce a clean 2-sentence response that satisfies all constraints
       })(),
       revisions: [{ rev: 1, date: new Date().toISOString().split("T")[0], change: "Created" }],
       createdVia: "chat_rec_block",
+      silent: silentByMsgIndex[msgIndex] === true,
     };
     let savedFromAddRec;
     try {
@@ -934,6 +936,7 @@ If you cannot produce a clean 2-sentence response that satisfies all constraints
     setPendingLink(null);
     setEditingCapture(null);
     setCaptureLinkInputs(prev => { const next = { ...prev }; delete next[msgIndex]; return next; });
+    setSilentByMsgIndex(prev => { const next = { ...prev }; delete next[msgIndex]; return next; });
   };
 
   const handleAddLink = async () => {
@@ -1152,6 +1155,26 @@ If you cannot produce a clean 2-sentence response that satisfies all constraints
                             onBlur={e => e.target.style.borderColor = W.bdr}
                           />
                         )}
+                        {profile?.isTester === true && (
+                          <div style={{ marginBottom: 10 }}>
+                            <label style={{
+                              display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer",
+                            }}>
+                              <input
+                                type="checkbox"
+                                checked={silentByMsgIndex[i] === true}
+                                onChange={(e) => setSilentByMsgIndex(prev => ({ ...prev, [i]: e.target.checked }))}
+                                style={{ marginTop: 2, accentColor: T.ink3, cursor: "pointer" }}
+                              />
+                              <span>
+                                <span style={{ fontFamily: F, fontSize: 13, color: T.ink2 }}>Save silently (don't notify subscribers)</span>
+                                <span style={{ display: "block", fontFamily: F, fontSize: 11, color: T.ink3, marginTop: 2, lineHeight: 1.4 }}>
+                                  Rec still saves and appears in subscriber feeds — only suppresses the email alert.
+                                </span>
+                              </span>
+                            </label>
+                          </div>
+                        )}
                         <div style={{ display: "flex", gap: 8 }}>
                           <button onClick={() => handleSaveCapture(msg.capturedRec, i)} style={{
                             padding: "8px 16px", borderRadius: 10, border: "none",
@@ -1244,6 +1267,26 @@ If you cannot produce a clean 2-sentence response that satisfies all constraints
                             onFocus={e => e.target.style.borderColor = W.accent}
                             onBlur={e => e.target.style.borderColor = W.bdr}
                           />
+                        )}
+                        {profile?.isTester === true && (
+                          <div style={{ marginBottom: 10 }}>
+                            <label style={{
+                              display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer",
+                            }}>
+                              <input
+                                type="checkbox"
+                                checked={silentByMsgIndex[i] === true}
+                                onChange={(e) => setSilentByMsgIndex(prev => ({ ...prev, [i]: e.target.checked }))}
+                                style={{ marginTop: 2, accentColor: T.ink3, cursor: "pointer" }}
+                              />
+                              <span>
+                                <span style={{ fontFamily: F, fontSize: 13, color: T.ink2 }}>Save silently (don't notify subscribers)</span>
+                                <span style={{ display: "block", fontFamily: F, fontSize: 11, color: T.ink3, marginTop: 2, lineHeight: 1.4 }}>
+                                  Rec still saves and appears in subscriber feeds — only suppresses the email alert.
+                                </span>
+                              </span>
+                            </label>
+                          </div>
                         )}
                         <div style={{ display: "flex", gap: 8 }}>
                           <button onClick={() => handleSaveCapture(msg.capturedRec, i)} style={{
