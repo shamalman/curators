@@ -925,9 +925,8 @@ If you cannot produce a clean 2-sentence response that satisfies all constraints
       }
     }, 3000);
 
-    // Regenerate taste profile after every Nth rec save (fire and forget)
-    const TASTE_PROFILE_REGEN_INTERVAL = 1;
-    if (recCount >= 3 && recCount % TASTE_PROFILE_REGEN_INTERVAL === 0) {
+    // Regenerate taste profile on every rec save past threshold (fire and forget)
+    if (recCount >= 3) {
       fetch('/api/generate-taste-profile', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
