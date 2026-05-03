@@ -87,7 +87,7 @@ export default function ChatView({ variant }) {
   const isBackNav = useRef(messages.length > 0);
   const nudgeTimer = useRef(null);
   const typedSinceSave = useRef(false);
-  const tappedActionMsgIndices = useRef(new Set());
+  const tappedActionsByMsgId = useRef(new Map());
   const isWaitingForResponse = useRef(false);
   // Bug 1: scope draftWhyFromConversation to messages added in the current session,
   // not historical chat loaded from the DB on mount.
@@ -623,7 +623,7 @@ If you cannot produce a clean 2-sentence response that satisfies all constraints
       if (textWithoutUrl.startsWith("save_rec_from_chat") || textWithoutUrl.startsWith("save_rec_from_taste_read") || textWithoutUrl === "skip_save") continue;
       // Skip known action confirmation strings injected by the system
       if (textWithoutUrl === "Added to my Taste File." || textWithoutUrl === "Added to my Taste File") continue;
-      if (textWithoutUrl.startsWith("Do a taste read on ")) continue;
+      if (textWithoutUrl.startsWith("Do a Read on ")) continue;
       if (textWithoutUrl.length < 20 && /\.$/.test(textWithoutUrl)) continue;
       if (/^(Added|Saved|Done|Got it|Skip|Keep exploring)[\.\!]?$/i.test(textWithoutUrl)) continue;
       // Got something substantive — return verbatim, truncated to 200 chars
@@ -1063,7 +1063,7 @@ If you cannot produce a clean 2-sentence response that satisfies all constraints
                       blocks={msg.blocks}
                       interactions={msg.interactions || []}
                       messageId={msg.id}
-                      tapped={msg.id ? tappedActionMsgIndices.current.has(msg.id) : false}
+                      tappedActions={msg.id ? Array.from(tappedActionsByMsgId.current.get(msg.id) || []) : []}
                       onSendMessage={(action) => {
                         // Deploy 2: discuss_link — silent meta-action. Must fire BEFORE
                         // any other branch so the action string can never leak to send().
@@ -1084,7 +1084,7 @@ If you cannot produce a clean 2-sentence response that satisfies all constraints
                             headers: { "Content-Type": "application/json" },
                             body: JSON.stringify({ url, action: "taste_read" }),
                           }).catch(() => {});
-                          send(`Do a taste read on ${url}`);
+                          send(`Do a Read on ${url}`);
                           return;
                         }
                         // Feature B: intercept save-image-rec actions before they hit send()
@@ -1114,7 +1114,15 @@ If you cannot produce a clean 2-sentence response that satisfies all constraints
                       }}
                       onInteraction={(msgId, blockIdx, act) => {
                         // Bug 3: track by DB message ID, not array index — indices shift when history loads.
-                        if (msg.id) tappedActionMsgIndices.current.add(msg.id);
+                        // Per-action set so siblings stay live; only the tapped option disables.
+                        if (msg.id) {
+                          let set = tappedActionsByMsgId.current.get(msg.id);
+                          if (!set) {
+                            set = new Set();
+                            tappedActionsByMsgId.current.set(msg.id, set);
+                          }
+                          set.add(act);
+                        }
                         handleInteraction(msgId, blockIdx, act);
                       }}
                     />

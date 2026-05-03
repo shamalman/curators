@@ -7,7 +7,7 @@ import FeedTasteRead from "./FeedTasteRead";
 import FeedAgentBanner from "./FeedAgentBanner";
 import TasteReadCard from "../taste-read/TasteReadCard";
 
-export default function FeedBlockGroup({ blocks, interactions, messageId, tapped, onSendMessage, onInteraction }) {
+export default function FeedBlockGroup({ blocks, interactions, messageId, tappedActions, onSendMessage, onInteraction }) {
   if (!blocks || blocks.length === 0) return null;
   return (
     <div style={{ padding: "4px 0", display: "flex", flexDirection: "column" }}>
@@ -22,12 +22,15 @@ export default function FeedBlockGroup({ blocks, interactions, messageId, tapped
           case 'taste_read_card':
             return <TasteReadCard key={i} data={block.data} onSendMessage={onSendMessage} />;
           case 'action_buttons': {
-            const isUsed = tapped || (interactions || []).some(x => x.block_index === i);
+            const interactionActions = (interactions || [])
+              .filter(x => x.block_index === i)
+              .map(x => x.action);
+            const usedActions = new Set([...interactionActions, ...(tappedActions || [])]);
             return (
               <FeedActionButtons
                 key={i}
                 data={block.data}
-                used={isUsed}
+                usedActions={usedActions}
                 onUse={(option) => {
                   if (onInteraction) onInteraction(messageId, i, option.action);
                   if (onSendMessage) onSendMessage(option.action);

@@ -69,8 +69,8 @@ export async function POST(request) {
       return NextResponse.json({ message: "No message provided" }, { status: 400 });
     }
 
-    // Deploy 3: detect "Do a taste read on <url>" trigger from the taste_read action button
-    const tasteReadMatch = message && message.match(/^Do a taste read on (https?:\/\/\S+)/i);
+    // Deploy 3: detect "Do a Read on <url>" trigger from the taste_read action button
+    const tasteReadMatch = message && message.match(/^Do a Read on (https?:\/\/\S+)/i);
     const tasteReadUrl = tasteReadMatch ? tasteReadMatch[1] : null;
 
     const recCount = recommendations ? recommendations.length : 0;
