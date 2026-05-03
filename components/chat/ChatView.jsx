@@ -684,20 +684,11 @@ If you cannot produce a clean 2-sentence response that satisfies all constraints
       }
     }
 
-    console.log("[DEBUG walkback]", {
-      url,
-      totalMessages: messages.length,
-      walkedBackCount: Math.min(10, messages.length),
-      matchFound: !!matchedBlock,
-      matchedUrl: matchedBlock?.url,
-      matchedKeys: matchedBlock ? Object.keys(matchedBlock) : null,
-    });
-
     // Save-from-TasteReadCard passes skipWhyDraft: the taste read context is
     // not the curator's why. Let QCS open with a blank context field.
     const why = skipWhyDraft ? "" : draftWhyFromConversation(url);
 
-    const prefillObject = {
+    setSheetPrefillData({
       mode: "url",
       url: url,
       title: title,
@@ -707,15 +698,7 @@ If you cannot produce a clean 2-sentence response that satisfies all constraints
       thumbnail_url: thumbnail_url,
       provider: provider,
       createdViaOverride: createdVia,
-    };
-    console.log("[DEBUG prefill]", {
-      url,
-      hasParsedPayload: !!parsedPayload,
-      prefillUrl: prefillObject.url,
-      prefillTitle: prefillObject.title,
-      fullPrefillObject: prefillObject,
     });
-    setSheetPrefillData(prefillObject);
     setSheetOpen(true);
   };
 
@@ -1122,7 +1105,6 @@ If you cannot produce a clean 2-sentence response that satisfies all constraints
                         // conversational why-draft (taste read text is not the why).
                         if (typeof action === "string" && action.startsWith("save_rec_from_taste_read:")) {
                           const url = action.slice("save_rec_from_taste_read:".length);
-                          console.log("[DEBUG taste_read intercept]", { action, url });
                           handleSaveFromChat(url, { skipWhyDraft: true, createdVia: "chat_save_from_taste_read" });
                           return;
                         }
