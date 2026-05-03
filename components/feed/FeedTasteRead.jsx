@@ -56,7 +56,7 @@ export default function FeedTasteRead({ data }) {
             textTransform: "uppercase",
             color,
           }}>
-            TASTE READ
+            READ
           </span>
           {data.duration_sec != null && (
             <span style={{

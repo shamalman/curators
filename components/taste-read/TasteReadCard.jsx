@@ -409,7 +409,7 @@ export default function TasteReadCard({ data, onSendMessage }) {
           fontFamily: F, fontSize: 11, fontWeight: 700,
           letterSpacing: "0.06em", textTransform: "uppercase", color: ACCENT,
         }}>
-          TASTE READ
+          READ
         </span>
         <span style={{ fontFamily: F, fontSize: 12, color: T.ink3 }}>·</span>
         <span style={{ fontFamily: F, fontSize: 12, color: T.ink2 }}>{summary}</span>
@@ -435,7 +435,7 @@ export default function TasteReadCard({ data, onSendMessage }) {
           fontFamily: F, fontSize: 11, fontWeight: 700,
           letterSpacing: "0.06em", textTransform: "uppercase", color: ACCENT,
         }}>
-          TASTE READ
+          READ
         </span>
       </div>
 
@@ -492,7 +492,7 @@ export default function TasteReadCard({ data, onSendMessage }) {
                   {inf.text}
                 </div>
                 <div style={{ fontFamily: F, fontSize: 11, color: CONFIRMED_FG, marginTop: 6, fontWeight: 600 }}>
-                  Saved to taste profile
+                  Saved to your Record
                   <span style={{ color: T.ink3, fontWeight: 400 }}> · </span>
                   <button
                     onClick={() => onUndoConfirm(inf)}

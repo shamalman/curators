@@ -938,12 +938,12 @@ ${tasteReadContent}
           prompt: "What do you want to do with this link?",
           options: [
             {
-              label: "Add as recommendation",
+              label: "Save as Recommendation",
               action: `save_rec_from_chat:${firstUrl}`,
               style: "primary",
             },
             {
-              label: "Taste read",
+              label: "Add to Record",
               action: `taste_read:${firstUrl}`,
               style: "secondary",
             },

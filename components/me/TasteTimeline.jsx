@@ -11,8 +11,8 @@ function dotColor(ev) {
 }
 
 function labelText(ev) {
-  if (ev.type === 'confirmed') return 'Taste read · confirmed'
-  if (ev.type === 'corrected') return 'Taste read · corrected'
+  if (ev.type === 'confirmed') return 'Read · confirmed'
+  if (ev.type === 'corrected') return 'Read · corrected'
   if (ev.type === 'rec_saved') return ev.rec_is_own ? 'Your Recommendation' : 'Saved Recommendation'
   return ''
 }
@@ -367,7 +367,7 @@ export default function TasteTimeline({ handle }) {
       <div>
         {header}
         <div style={{ textAlign: 'center', color: T.ink3, fontSize: 14, lineHeight: 1.6, padding: '80px 24px' }}>
-          No taste signals yet. Start by sharing a link in your AI chat and tapping Taste read.
+          Nothing in your Record yet. Start by sharing a link in your AI chat and tapping Add to Record.
         </div>
       </div>
     )
