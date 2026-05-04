@@ -174,33 +174,9 @@ export async function POST(request) {
       }
     }
 
-    // Load taste profile + last 15 own recs for prompt context.
-    const [{ data: tasteProfileRow }, { data: recentRecs }] = await Promise.all([
-      admin
-        .from("taste_profiles")
-        .select("content")
-        .eq("profile_id", profileId)
-        .maybeSingle(),
-      admin
-        .from("recommendations")
-        .select("title, category, context")
-        .eq("profile_id", profileId)
-        .order("created_at", { ascending: false })
-        .limit(15),
-    ]);
-
-    const tasteProfileContent = tasteProfileRow?.content || null;
-    const recsBlock = (recentRecs || [])
-      .map(r => `- ${r.title} (${r.category || "other"}): ${r.context || ""}`)
-      .join("\n");
-
     const skill = loadSkill("taste-read", aiProfile);
     const systemPrompt =
       skill +
-      "\n\nCURATOR TASTE PROFILE:\n" +
-      (tasteProfileContent || "No taste profile yet. This is an early share.") +
-      "\n\nRECENT RECOMMENDATIONS (for context, do not infer from these unless the current content genuinely connects to them):\n" +
-      (recsBlock || "(none)") +
       "\n\nPARSED CONTENT:\n" +
       parsed_content;
 
