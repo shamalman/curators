@@ -378,7 +378,12 @@ You could NOT access the full content of this link. Acknowledge only the title a
     // Taste read turns get an empty context — the read must be a pure analysis
     // of the submitted content, with no awareness of the curator's other recs.
     const curHandle = curatorHandle?.replace('@', '') || '';
-    const recsContext = tasteReadUrl
+    // CHAT-VERBOSITY fix: strip recs context on URL-drop turns. The model produces
+    // comparative essays weaving the URL into the curator's existing recs list when
+    // both are injected. URL-drop turns get a focused, action-oriented response;
+    // conversational turns (no URL parsed this turn) keep the full recs context.
+    const isUrlDropTurn = parsedLinkBlocks.length > 0;
+    const recsContext = (tasteReadUrl || isUrlDropTurn)
       ? ""
       : (recommendations && recommendations.length > 0
         ? `\n\nCRITICAL: Only reference recommendations that appear in the CURRENT RECOMMENDATIONS LIST below. If something was discussed in previous chat messages but is NOT in the current list, the curator has deleted it. Never mention it, never reference it, pretend it never existed. The current list is the ONLY source of truth for what the curator recommends.\n\nCURRENT RECOMMENDATIONS LIST (${recommendations.length} total):\n${recommendations.map(r => {
@@ -425,25 +430,27 @@ You could NOT access the full content of this link. Acknowledge only the title a
       }
       systemPrompt = buildVisitorPrompt({ curatorName, styleBlock, recsContext, aiProfile });
     } else if (isOnboarding && profileId) {
-      // Fetch taste profile for injection
+      // Fetch taste profile for injection. Skip on URL-drop turns (CHAT-VERBOSITY).
       let tasteProfileBlock = '';
-      try {
-        const { data: tasteProfile } = await sb
-          .from('taste_profiles')
-          .select('content')
-          .eq('profile_id', profileId)
-          .single();
-        if (tasteProfile?.content) {
-          tasteProfileBlock = `\n\n=== CURATOR REFERENCE DOCUMENT ===
+      if (!isUrlDropTurn) {
+        try {
+          const { data: tasteProfile } = await sb
+            .from('taste_profiles')
+            .select('content')
+            .eq('profile_id', profileId)
+            .single();
+          if (tasteProfile?.content) {
+            tasteProfileBlock = `\n\n=== CURATOR REFERENCE DOCUMENT ===
 The following document was generated separately to summarize this curator's recs and patterns. Use it as factual reference: who they are, what they have saved, what domains they cover, how they communicate.
 Do NOT mirror its verdict-shaped voice in your responses. Do NOT restate its thesis at them. The document is for your context only. Your responses follow the charter and skill files, not the document's voice.
 
 ${tasteProfile.content}
 
 === END REFERENCE DOCUMENT ===`;
+          }
+        } catch (err) {
+          console.error('Failed to fetch taste profile:', err);
         }
-      } catch (err) {
-        console.error('Failed to fetch taste profile:', err);
       }
 
       inviterCtx = await getInviterContext(profileId);
@@ -459,25 +466,27 @@ ${tasteProfile.content}
         aiProfile,
       }) + recsContext + linkContextBlock;
     } else {
-      // Fetch taste profile for injection
+      // Fetch taste profile for injection. Skip on URL-drop turns (CHAT-VERBOSITY).
       let tasteProfileBlock = '';
-      try {
-        const { data: tasteProfile } = await sb
-          .from('taste_profiles')
-          .select('content')
-          .eq('profile_id', profileId)
-          .single();
-        if (tasteProfile?.content) {
-          tasteProfileBlock = `\n\n=== CURATOR REFERENCE DOCUMENT ===
+      if (!isUrlDropTurn) {
+        try {
+          const { data: tasteProfile } = await sb
+            .from('taste_profiles')
+            .select('content')
+            .eq('profile_id', profileId)
+            .single();
+          if (tasteProfile?.content) {
+            tasteProfileBlock = `\n\n=== CURATOR REFERENCE DOCUMENT ===
 The following document was generated separately to summarize this curator's recs and patterns. Use it as factual reference: who they are, what they have saved, what domains they cover, how they communicate.
 Do NOT mirror its verdict-shaped voice in your responses. Do NOT restate its thesis at them. The document is for your context only. Your responses follow the charter and skill files, not the document's voice.
 
 ${tasteProfile.content}
 
 === END REFERENCE DOCUMENT ===`;
+          }
+        } catch (err) {
+          console.error('Failed to fetch taste profile:', err);
         }
-      } catch (err) {
-        console.error('Failed to fetch taste profile:', err);
       }
 
       // Taste read turns: skip network context — pure content analysis only.
