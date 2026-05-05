@@ -231,11 +231,13 @@ Full schema with column types: `docs/schema.md`. Rec files migration: `docs/rec-
 ## Open Engineering Tickets
 
 - **READ-DRIFT (RESOLVED May 4, commit `28988ae`):** Per-URL Read endpoint stripped of Record + recs injection. Chips now generated from `skill + parsed_content` only.
-- **CHAT-VERBOSITY (P1):** Chat route URL-paste responses produce context-aware comparative essays via injected taste profile + recs, even when user just wants to do a Read or save. May warrant gating `tasteProfileBlock` and `recsContext` on URL-drop turns.
-- **LENS-004 (P1):** Em dashes and spaced hyphens still appear as `**Header** —` and `**Header** -` connectors in generated Records despite explicit prompt ban.
+- **CHAT-VERBOSITY (RESOLVED May 5, commit `429407a`):** Chat route now strips `tasteProfileBlock` and `recsContext` injection on URL-drop turns. Gate is `parsedLinkBlocks.length > 0` (covers successful, partial, and failed parses; covers all three button-picker turns; correctly excludes follow-on conversational turns). Conversational turns retain full Record + recs context. Per roadmap §3d, Option A.
+- **LENS-004 (RESOLVED May 5, commit `4784c70`):** Added explicit DO NOT WRITE / INSTEAD WRITE example block adjacent to existing em-dash ban in `lib/taste-profile/generate.js`. Verified clean across @shamal v119, @chris v26, @bradbarrish v9, @testmctesty v5 (including SUBSCRIBER-ONLY branch). Rule generalized beyond Domains. Patterns subheads also adopted `**Header**:` format. Per roadmap §3e, Option A.
 - **TASTE-PROFILE-VOICE-STYLE (P3):** Voice & Style section can drop in subscriber-only branch.
 - **INVITE-001 (P3):** Signup invite-code lookup is case-sensitive.
 - **PARSER-003 (P2):** Spotify Strategy C observability gap on `/api/chat` concurrent parse path.
+- **LENS-005 (P3):** Stats `Last updated:` line drifts to fabricated date on thin-data profiles. @bradbarrish v9 produced `December 2024` instead of injected `May 2026` literal. Reproduces only on data-rich-poor profiles (7 recs / 0 confirmations / 0 subscriptions); did not reproduce on @shamal, @chris, or @testmctesty v5 (which is also thin but in the SUBSCRIBER-ONLY branch). Cosmetic.
+- **LENS-006 (observation, no fix needed):** LENS-004 example block (added to Domains-section RULES) generalized to Patterns subheads as well. This is desired behavior. The formatting rule should apply broadly. Future prompt edits to `lib/taste-profile/generate.js` RULES block should expect cross-section influence.
 
 ---
 
