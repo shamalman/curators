@@ -566,26 +566,99 @@ The curator will choose what to do with it via the action buttons.
     // Build messages array from history, stripping deleted rec references
     const messages = [];
 
-    if (history && history.length > 0) {
-      const recent = history.slice(-10);
-      for (const msg of recent) {
-        let text = msg.text || "";
-        // If this message captured a rec that's since been deleted, strip the capture data
-        if (msg.capturedRec && !currentTitles.has(msg.capturedRec)) {
-          // Replace capture card content referencing the deleted rec
-          text = text.replace(/📍 Adding:.*$/ms, '[A recommendation was captured here but has since been removed by the curator.]');
+    // ── Server-side history fetch for replay (replaces client `history` for rehydration) ──
+    // Ignores client-supplied history; pulls authoritative rows from DB.
+    // Capped at 2 rehydrated images per request to bound prompt size.
+    let serverHistory = [];
+    if (profileId) {
+      try {
+        const { data: rows, error: histErr } = await sb
+          .from('chat_messages')
+          .select('id, role, text, captured_rec, meta, created_at')
+          .eq('profile_id', profileId)
+          .order('created_at', { ascending: false })
+          .limit(10);
+
+        if (histErr) {
+          console.error('[HISTORY_FETCH_ERROR]', histErr.message);
+        } else if (rows) {
+          // Reverse to chronological order for replay
+          serverHistory = rows.slice().reverse();
         }
-        // Note if the message originally included an image (base64 not stored in history)
-        if (msg.imagePreview) {
-          text = text ? `${text} [sent an image]` : "[sent an image]";
+      } catch (err) {
+        console.error('[HISTORY_FETCH_ERROR] catch', err?.message || err);
+      }
+    }
+
+    // Identify the 2 most recent user rows that carry image artifacts (for rehydration cap).
+    const imageBearingRowIds = serverHistory
+      .filter(r => r.role === 'user' && r.meta?.imageRecCandidate?.sha256)
+      .slice(-2)
+      .map(r => r.id);
+
+    let imagesRehydrated = 0;
+
+    for (const msg of serverHistory) {
+      let text = msg.text || "";
+
+      // Captured rec stale check (existing behavior, ported to server rows)
+      if (msg.captured_rec && !currentTitles.has(msg.captured_rec)) {
+        text = text.replace(/📍 Adding:.*$/ms, '[A recommendation was captured here but has since been removed by the curator.]');
+      }
+
+      const hasImage = msg.role === 'user' && msg.meta?.imageRecCandidate?.sha256;
+      const shouldRehydrate = hasImage && imageBearingRowIds.includes(msg.id);
+
+      if (shouldRehydrate) {
+        try {
+          const { data: blob, error: dlErr } = await sb
+            .storage
+            .from('artifacts')
+            .download(msg.meta.imageRecCandidate.artifactPath);
+
+          if (dlErr || !blob) {
+            console.error('[IMAGE_REHYDRATE_ERROR]', dlErr?.message || 'no blob', 'rowId=', msg.id);
+            text = text ? `${text} [an earlier image was shared, no longer in context]` : '[an earlier image was shared, no longer in context]';
+            if (text.trim()) {
+              messages.push({ role: 'user', content: text });
+            }
+            continue;
+          }
+
+          const arrayBuf = await blob.arrayBuffer();
+          const base64 = Buffer.from(arrayBuf).toString('base64');
+
+          messages.push({
+            role: 'user',
+            content: [
+              { type: 'image', source: { type: 'base64', media_type: msg.meta.imageRecCandidate.mimeType, data: base64 } },
+              ...(text.trim() ? [{ type: 'text', text }] : []),
+            ],
+          });
+          imagesRehydrated++;
+          console.log('[IMAGE_REHYDRATE] rowId=', msg.id, 'sha=', msg.meta.imageRecCandidate.sha256, 'count=', imagesRehydrated);
+          continue;
+        } catch (err) {
+          console.error('[IMAGE_REHYDRATE_ERROR] catch', err?.message || err, 'rowId=', msg.id);
+          text = text ? `${text} [an earlier image was shared, no longer in context]` : '[an earlier image was shared, no longer in context]';
+          if (text.trim()) {
+            messages.push({ role: 'user', content: text });
+          }
+          continue;
         }
-        // Bug 1 fix: skip empty-text history messages that would crash Claude API
-        if (!text.trim()) continue;
-        if (msg.role === "user") {
-          messages.push({ role: "user", content: text });
-        } else if (msg.role === "ai" || msg.role === "assistant") {
-          messages.push({ role: "assistant", content: text });
-        }
+      }
+
+      // Image in row but outside the rehydration cap — stub
+      if (hasImage && !shouldRehydrate) {
+        text = text ? `${text} [an earlier image was shared, no longer in context]` : '[an earlier image was shared, no longer in context]';
+      }
+
+      if (!text.trim()) continue;
+
+      if (msg.role === 'user') {
+        messages.push({ role: 'user', content: text });
+      } else if (msg.role === 'ai' || msg.role === 'assistant') {
+        messages.push({ role: 'assistant', content: text });
       }
     }
 
@@ -1072,6 +1145,44 @@ ${tasteReadContent}
         }
       } catch (err) {
         console.error('[PARSED_CONTENT_SAVE_ERROR]', err.message);
+      }
+    }
+
+    // ── Persist image artifact pointers on the latest user row for history rehydration ──
+    if (imageRecCandidate && profileId) {
+      try {
+        const { data: latestUserRow, error: findErr } = await sb
+          .from('chat_messages')
+          .select('id, meta')
+          .eq('profile_id', profileId)
+          .eq('role', 'user')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (findErr) {
+          console.error('[IMAGE_META_PERSIST_ERROR] find', findErr.message);
+        } else if (latestUserRow) {
+          const mergedMeta = {
+            ...(latestUserRow.meta || {}),
+            imageRecCandidate: {
+              sha256: imageRecCandidate.sha256,
+              artifactPath: imageRecCandidate.artifactPath,
+              mimeType: imageRecCandidate.mimeType,
+            },
+          };
+          const { error: updateErr } = await sb
+            .from('chat_messages')
+            .update({ meta: mergedMeta })
+            .eq('id', latestUserRow.id);
+          if (updateErr) {
+            console.error('[IMAGE_META_PERSIST_ERROR] update', updateErr.message);
+          } else {
+            console.log('[IMAGE_META_PERSIST] success rowId=', latestUserRow.id, 'sha=', imageRecCandidate.sha256);
+          }
+        }
+      } catch (err) {
+        console.error('[IMAGE_META_PERSIST_ERROR] catch', err?.message || err);
       }
     }
 
