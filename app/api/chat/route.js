@@ -789,8 +789,9 @@ ${tasteReadContent}
         // Save to feedback table
         const { error: fbError } = await sb.from('feedback').insert({
           profile_id: profileId,
+          handle: curatorHandle || null,
           original_message: feedback.message,
-          summary: feedback.summary,
+          summary: feedback.type ? `[${feedback.type}] ${feedback.summary}` : feedback.summary,
         });
         if (fbError) {
           console.error('[FEEDBACK_DB_ERROR]', fbError.message);
