@@ -236,7 +236,7 @@ Full schema with column types: `docs/schema.md`. Rec files migration: `docs/rec-
 - **TASTE-PROFILE-VOICE-STYLE (P3):** Voice & Style section can drop in subscriber-only branch.
 - **INVITE-001 (P3):** Signup invite-code lookup is case-sensitive.
 - **PARSER-003 (P2):** Spotify Strategy C observability gap on `/api/chat` concurrent parse path.
-- **LENS-005 (P3):** Stats `Last updated:` line drifts to fabricated date on thin-data profiles. @bradbarrish v9 produced `December 2024` instead of injected `May 2026` literal. Reproduces only on data-rich-poor profiles (7 recs / 0 confirmations / 0 subscriptions); did not reproduce on @shamal, @chris, or @testmctesty v5 (which is also thin but in the SUBSCRIBER-ONLY branch). Cosmetic.
+- **LENS-005 (RESOLVED May 5, commit `c721307`):** Server-side post-processing of Stats `Last updated:` line in `lib/taste-profile/generate.js`. After model returns markdown, regex-replace the line with authoritative server-side date. Fires `[LENS-005]` console.warn when override is non-trivial (model wrote a different date). Verified clean across all four profiles (@bradbarrish v10, @shamal v120, @chris v27, @testmctesty v6). Watch Vercel logs for `[LENS-005]` warnings to learn actual drift base rate in production traffic.
 - **LENS-006 (observation, no fix needed):** LENS-004 example block (added to Domains-section RULES) generalized to Patterns subheads as well. This is desired behavior. The formatting rule should apply broadly. Future prompt edits to `lib/taste-profile/generate.js` RULES block should expect cross-section influence.
 
 ---
