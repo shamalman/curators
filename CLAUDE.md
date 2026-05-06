@@ -2,7 +2,7 @@
 
 Operating manual for Claude Code in this repo. Loaded every session, so it stays lean. Architecture details live in `docs/` — referenced inline below.
 
-Last reviewed: May 4, 2026.
+Last reviewed: May 5, 2026.
 
 ---
 
@@ -123,6 +123,12 @@ Three-option URL-drop block emits unconditionally on URL drops (Save as Recommen
 
 Full mechanics, tool use, re-injection, charter: `docs/chat-route.md`.
 
+**History replay (server-fetched, May 5 2026 — commit `89f113d`):** The replay loop no longer reads from the client-supplied `history` array. The chat route server-fetches the last 10 `chat_messages` rows by `profile_id` and rebuilds replay from those. Server-fetch is harder to spoof and avoids client/server schema drift. Future edits to replay logic must not re-introduce client-trust patterns.
+
+**Image continuity across turns (commit `89f113d`):** After the existing `parsed_content` UPDATE block, a parallel UPDATE patches the latest `role='user'` row's `meta` column with `imageRecCandidate.{ sha256, artifactPath, mimeType }`. This is the same nested shape already used on assistant rows. On history replay, this shape is read and used to rehydrate images via `sb.storage.from('artifacts').download()`. Subset of fields only — `signedUrl`, `inferred`, `sizeBytes` are excluded as not needed for replay. Implementation chose `chat_messages.meta jsonb` over a new column to avoid the PostgREST schema-cache reload step (which has burned this project before).
+
+**Feedback `type` persistence (commit `d419fd6`):** `feedback.type` is persisted by prefixing the `summary` column. The original handoff doc misdiagnosed this as a column-name mismatch — actual issue was the `type` field being silently dropped during extraction. Also added `handle` column on the same commit.
+
 ### AI Skills System
 
 17 skill files in `lib/prompts/skills/`, mirrored to `lib/prompts/skills/staging/` for the staging AI lane. Build functions: `buildOnboardingPrompt`, `buildStandardPrompt`. `loadSkill(name, aiProfile)` reads from stable or staging path.
@@ -150,6 +156,8 @@ Full mechanics: `docs/notifications.md`.
 ### Source Parsers
 
 9 parsers in `lib/agent/parsers/`: Spotify, Apple Music, YouTube, SoundCloud, Letterboxd, Goodreads, Google Maps, Twitter/X, Generic Webpage (Defuddle universal fallback). Instagram and Bandcamp deferred.
+
+**⚠️ Caution — PARSER-007 (open):** Spotify Strategy C in `lib/agent/parsers/spotify.js` has timing logs from commit `a839311` but Strategy C is silently NOT firing in production. Production verification on May 5 across five Spotify track parses showed Strategy B `hasArtist:false` on four cases (gate condition demonstrably true) but zero `[SPOTIFY] track: strategy C entry` log lines. Do not assume Strategy C is operational. Root cause unknown — diagnostic in flight. See roadmap §4 PARSER-007.
 
 ---
 
@@ -193,7 +201,7 @@ scripts/regenerate-taste-profile.mjs       manual regen — requires --profile f
 
 ## Log Markers
 
-`[TASTE_READ_V2]`, `[TIMELINE]`, `[rec-files]`, `[chat-parse-ingest]`, `[taste-profile]`, `[NOTIFY_NEW_REC]`, `[NOTIFY_SKIPPED]`, `[INVITER_CONTEXT]`, `[AUTO_SUBSCRIBE]`, `[UPDATE_REC_FILE]`, `[AI_PROFILE]`, `[SKILL_LOAD]`, `[AI_RATING]`, `[FEEDBACK_SCREENSHOT_UPLOADED]`, `[ADMIN_TRANSCRIPTS_ACCESS]`, `[TASTE_READ_REINJECTION]`. Each has `_ERROR` / `_FAILED` / `_UNDO` variants.
+`[TASTE_READ_V2]`, `[TIMELINE]`, `[rec-files]`, `[chat-parse-ingest]`, `[taste-profile]`, `[NOTIFY_NEW_REC]`, `[NOTIFY_SKIPPED]`, `[INVITER_CONTEXT]`, `[AUTO_SUBSCRIBE]`, `[UPDATE_REC_FILE]`, `[AI_PROFILE]`, `[SKILL_LOAD]`, `[AI_RATING]`, `[FEEDBACK_SCREENSHOT_UPLOADED]`, `[ADMIN_TRANSCRIPTS_ACCESS]`, `[TASTE_READ_REINJECTION]`, `[IMAGE_META_PERSIST]`, `[IMAGE_META_PERSIST_ERROR]`, `[HISTORY_FETCH_ERROR]`, `[IMAGE_REHYDRATE]`, `[IMAGE_REHYDRATE_ERROR]`. Each has `_ERROR` / `_FAILED` / `_UNDO` variants.
 
 `[taste-profile] SUBSCRIBER-ONLY BRANCH activated` payload: `{ profileId, handle, confirmationCount, subscriptionCount }`. Monitor in production for first real subscriber-only Records.
 
