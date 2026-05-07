@@ -301,7 +301,6 @@ export default function QuickCaptureSheet({ isOpen, onClose, onSaved, defaultVis
   const [pendingUrl, setPendingUrl] = useState(null);
 
   // UI state
-  const [moreOpen, setMoreOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
@@ -335,7 +334,6 @@ export default function QuickCaptureSheet({ isOpen, onClose, onSaved, defaultVis
     setLinkInputValue("");
     setLinkLoading(false);
     setPendingUrl(null);
-    setMoreOpen(false);
     setSaving(false);
     setError(null);
     setAttachedLinks([]);
@@ -1115,80 +1113,63 @@ export default function QuickCaptureSheet({ isOpen, onClose, onSaved, defaultVis
           />
         </div>
 
-        {/* More options */}
-        <div style={{ marginBottom: 14 }}>
-          <button
-            type="button"
-            onClick={() => setMoreOpen((v) => !v)}
-            disabled={saving}
-            style={{
-              background: "transparent", border: "none", padding: 0,
-              color: T.ink2, fontSize: 13, fontFamily: F, cursor: saving ? "default" : "pointer",
-              display: "inline-flex", alignItems: "center", gap: 6,
-            }}
-          >
-            <span style={{ fontSize: 11 }}>{moreOpen ? "▾" : "▸"}</span>
-            More options
-          </button>
-          {moreOpen && (
-            <div style={{ marginTop: 12 }}>
-              {/* Visibility */}
-              <div style={{
-                display: "flex", alignItems: "center", justifyContent: "space-between",
-                padding: "12px 16px", borderRadius: 12, background: T.bg2,
-                border: `1px solid ${T.bdr}`, marginBottom: 12,
-              }}>
-                <div>
-                  <div style={{ fontFamily: F, fontSize: 14, fontWeight: 600, color: T.ink }}>
-                    {visibility === "public" ? "Public" : "Private"}
-                  </div>
-                  <div style={{ fontFamily: F, fontSize: 12, color: T.ink3, marginTop: 2 }}>
-                    {visibility === "public"
-                      ? "Shared with your subscribers and visitors"
-                      : "Only you and your AI can see this"}
-                  </div>
-                </div>
-                <button
-                  onClick={() => setVisibility((v) => v === "public" ? "private" : "public")}
-                  disabled={saving}
-                  style={{
-                    width: 48, height: 28, borderRadius: 14, border: "none",
-                    cursor: saving ? "default" : "pointer", position: "relative",
-                    background: visibility === "public" ? "#6BAA8E" : T.bdr,
-                    transition: "background .2s", flexShrink: 0,
-                  }}
-                >
-                  <div style={{
-                    width: 22, height: 22, borderRadius: 11, background: "#fff",
-                    position: "absolute", top: 3,
-                    left: visibility === "public" ? 23 : 3,
-                    transition: "left .2s", boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
-                  }} />
-                </button>
+        {/* Public + Silent (no disclosure) */}
+        <div style={{ marginTop: 24 }}>
+          {/* Public toggle row */}
+          <div style={{
+            display: "flex", alignItems: "center", justifyContent: "space-between",
+            padding: "12px 16px", borderRadius: 12, background: T.bg2,
+            border: `1px solid ${T.bdr}`, marginBottom: 12,
+          }}>
+            <div>
+              <div style={{ fontFamily: F, fontWeight: 500, fontSize: 15, color: T.ink }}>Public</div>
+              <div style={{ fontFamily: F, fontSize: 12, color: T.ink2, marginTop: 2 }}>
+                Shared with your subscribers and visitors
               </div>
-
-              {/* Silent (testers only) */}
-              {showSilentToggle && (
-                <label style={{
-                  display: "flex", alignItems: "flex-start", gap: 10,
-                  cursor: saving ? "default" : "pointer",
-                }}>
-                  <input
-                    type="checkbox"
-                    checked={silentSave}
-                    onChange={(e) => setSilentSave(e.target.checked)}
-                    disabled={saving}
-                    style={{ marginTop: 2, accentColor: T.ink3, cursor: saving ? "default" : "pointer" }}
-                  />
-                  <span>
-                    <span style={{ fontFamily: F, fontSize: 13, color: T.ink2 }}>Save silently (don't notify subscribers)</span>
-                    <span style={{ display: "block", fontFamily: F, fontSize: 11, color: T.ink3, marginTop: 2, lineHeight: 1.4 }}>
-                      Rec still saves and appears in subscriber feeds — only suppresses the email alert.
-                    </span>
-                  </span>
-                </label>
-              )}
             </div>
+            <button
+              onClick={() => setVisibility((v) => v === "public" ? "private" : "public")}
+              disabled={saving}
+              aria-label="Toggle public"
+              style={{
+                width: 48, height: 28, borderRadius: 14, border: "none",
+                cursor: saving ? "default" : "pointer", position: "relative",
+                background: visibility === "public" ? "#6BAA8E" : T.bdr,
+                transition: "background .2s", flexShrink: 0,
+              }}
+            >
+              <div style={{
+                width: 22, height: 22, borderRadius: 11, background: "#fff",
+                position: "absolute", top: 3,
+                left: visibility === "public" ? 23 : 3,
+                transition: "left .2s", boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
+              }} />
+            </button>
+          </div>
+
+          {/* Silent (testers only) */}
+          {showSilentToggle && (
+            <label style={{
+              display: "flex", alignItems: "flex-start", gap: 10,
+              padding: "4px 4px 14px 4px",
+              cursor: saving ? "default" : "pointer",
+            }}>
+              <input
+                type="checkbox"
+                checked={silentSave}
+                onChange={(e) => setSilentSave(e.target.checked)}
+                disabled={saving}
+                style={{ marginTop: 2, accentColor: T.acc, cursor: saving ? "default" : "pointer" }}
+              />
+              <div>
+                <div style={{ fontFamily: F, fontWeight: 500, fontSize: 14, color: T.ink }}>
+                  Save silently (don't notify subscribers)
+                </div>
+                <div style={{ fontFamily: F, fontSize: 12, color: T.ink2, marginTop: 2, lineHeight: 1.4 }}>
+                  Rec still saves and appears in subscriber feeds. Only suppresses the email alert.
+                </div>
+              </div>
+            </label>
           )}
         </div>
 
