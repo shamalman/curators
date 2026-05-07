@@ -1,266 +1,458 @@
 'use client'
 
-import { useState, useEffect, useContext } from "react";
-import { T, F, S, MN } from "@/lib/constants";
-import { CuratorContext } from "@/context/CuratorContext";
+import { useState, useEffect, useContext } from 'react'
+import { T, F, S, MN, MAX_UNUSED_INVITES } from '@/lib/constants'
+import { CuratorContext } from '@/context/CuratorContext'
+import SegmentedControl from '@/components/ui/SegmentedControl'
 
-const MAX_UNUSED = 25;
+const PAGE_SIZE = 10
+
+const emptyTab = { rows: [], hasMore: false, loaded: false, loading: false }
+
+function formatRelative(dateStr) {
+  if (!dateStr) return ''
+  const d = new Date(dateStr)
+  const diff = Date.now() - d.getTime()
+  if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`
+  if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`
+  if (diff < 604800000) return `${Math.floor(diff / 86400000)}d ago`
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+}
+
+function copyToClipboard(text) {
+  if (navigator.clipboard?.writeText) {
+    navigator.clipboard.writeText(text)
+    return
+  }
+  const ta = document.createElement('textarea')
+  ta.value = text
+  ta.style.cssText = 'position:fixed;opacity:0;left:-9999px'
+  document.body.appendChild(ta)
+  ta.select()
+  document.execCommand('copy')
+  document.body.removeChild(ta)
+}
 
 export default function InvitePage() {
-  const { profileId } = useContext(CuratorContext);
-  const [unused, setUnused] = useState([]);
-  const [used, setUsed] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [generating, setGenerating] = useState(false);
-  const [showNoteFor, setShowNoteFor] = useState(null);
-  const [noteText, setNoteText] = useState("");
-  const [noteSaved, setNoteSaved] = useState(null);
-  const [copiedId, setCopiedId] = useState(null);
-  const [shareToast, setShareToast] = useState(null);
-  const [showAllUsed, setShowAllUsed] = useState(false);
-  const [unlimitedInvites, setUnlimitedInvites] = useState(false);
+  const { profileId } = useContext(CuratorContext)
+  const [activeTab, setActiveTab] = useState('used')
+  const [pending, setPending] = useState(emptyTab)
+  const [used, setUsed] = useState(emptyTab)
+  const [counts, setCounts] = useState({ pending: 0, used: 0 })
+  const [unlimitedInvites, setUnlimitedInvites] = useState(false)
+  const [expandedId, setExpandedId] = useState(null)
+  const [editingNoteId, setEditingNoteId] = useState(null)
+  const [noteText, setNoteText] = useState('')
+  const [copiedId, setCopiedId] = useState(null)
+  const [shareToast, setShareToast] = useState(null)
+  const [revokingId, setRevokingId] = useState(null)
+  const [generating, setGenerating] = useState(false)
 
-  const fetchCodes = async () => {
-    if (!profileId) return;
+  async function fetchPage(status, offset) {
+    const url = `/api/invite?profileId=${profileId}&mode=all&status=${status}&limit=${PAGE_SIZE}&offset=${offset}`
+    const res = await fetch(url)
+    return res.json()
+  }
+
+  async function loadFirstPage(status) {
+    if (!profileId) return
+    const setter = status === 'pending' ? setPending : setUsed
+    setter(prev => ({ ...prev, loading: true }))
     try {
-      const res = await fetch(`/api/invite?profileId=${profileId}&mode=all`);
-      const data = await res.json();
-      setUnused(data.unused || []);
-      setUsed(data.used || []);
-      if (data.unlimitedInvites) setUnlimitedInvites(true);
-    } catch {}
-    setLoading(false);
-  };
+      const data = await fetchPage(status, 0)
+      if (data?.error) throw new Error(data.error)
+      setter({
+        rows: data.rows || [],
+        hasMore: !!data.hasMore,
+        loaded: true,
+        loading: false,
+      })
+      setCounts(data.counts || { pending: 0, used: 0 })
+      setUnlimitedInvites(!!data.unlimitedInvites)
+    } catch (err) {
+      console.error('[INVITE_FETCH_ERROR]', err)
+      setter(prev => ({ ...prev, loading: false, loaded: true }))
+    }
+  }
 
-  useEffect(() => { fetchCodes(); }, [profileId]);
+  async function loadMore(status) {
+    if (!profileId) return
+    const current = status === 'pending' ? pending : used
+    const setter = status === 'pending' ? setPending : setUsed
+    setter(prev => ({ ...prev, loading: true }))
+    try {
+      const data = await fetchPage(status, current.rows.length)
+      if (data?.error) throw new Error(data.error)
+      setter(prev => ({
+        rows: [...prev.rows, ...(data.rows || [])],
+        hasMore: !!data.hasMore,
+        loaded: true,
+        loading: false,
+      }))
+      if (data.counts) setCounts(data.counts)
+    } catch (err) {
+      console.error('[INVITE_FETCH_ERROR]', err)
+      setter(prev => ({ ...prev, loading: false }))
+    }
+  }
 
-  const generateNew = async () => {
-    setGenerating(true);
+  useEffect(() => {
+    if (!profileId) return
+    loadFirstPage('used')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profileId])
+
+  const onTabChange = (id) => {
+    setActiveTab(id)
+    setExpandedId(null)
+    setEditingNoteId(null)
+    const tab = id === 'pending' ? pending : used
+    if (!tab.loaded && !tab.loading) loadFirstPage(id)
+  }
+
+  const toggleExpand = (id) => {
+    if (expandedId === id) {
+      setExpandedId(null)
+      setEditingNoteId(null)
+    } else {
+      setExpandedId(id)
+      setEditingNoteId(null)
+    }
+  }
+
+  const generate = async () => {
+    if (!profileId) return
+    setGenerating(true)
     try {
       const res = await fetch('/api/invite', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ profileId, action: "generate" }),
-      });
-      const data = await res.json();
-      if (data.code) {
-        setUnused(prev => [{ ...data.code, created_at: new Date().toISOString() }, ...prev]);
-        setShowNoteFor(data.code.id);
-        setNoteText("");
+        body: JSON.stringify({ profileId, action: 'generate' }),
+      })
+      const data = await res.json()
+      if (data?.code) {
+        setActiveTab('pending')
+        await loadFirstPage('pending')
+        setExpandedId(data.code.id)
       }
-    } catch {}
-    setGenerating(false);
-  };
-
-  const saveNote = async (codeId) => {
-    await fetch('/api/invite', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ codeId, inviterNote: noteText.trim() }),
-    });
-    setUnused(prev => prev.map(c => c.id === codeId ? { ...c, inviter_note: noteText.trim() } : c));
-    setNoteSaved(codeId);
-    setShowNoteFor(null);
-    setTimeout(() => setNoteSaved(null), 2000);
-  };
-
-  const copyToClipboard = (text) => {
-    if (navigator.clipboard?.writeText) {
-      navigator.clipboard.writeText(text);
-      return;
+    } catch (err) {
+      console.error('[INVITE_GENERATE_ERROR]', err)
     }
-    const ta = document.createElement("textarea");
-    ta.value = text;
-    ta.style.cssText = "position:fixed;opacity:0;left:-9999px";
-    document.body.appendChild(ta);
-    ta.select();
-    document.execCommand("copy");
-    document.body.removeChild(ta);
-  };
-
-  const copyCode = (code) => {
-    copyToClipboard(code.code);
-    setCopiedId(code.id);
-    setTimeout(() => setCopiedId(null), 2000);
-  };
-
-  const shareCode = (code) => {
-    const shareMessage = `Join me on curators.ai with this exclusive invite code: ${code.code}`;
-    if (navigator.share) {
-      navigator.share({ text: shareMessage }).catch(() => {});
-    } else {
-      copyToClipboard(shareMessage);
-      setShareToast(code.id);
-      setTimeout(() => setShareToast(null), 2500);
-    }
-  };
-
-  const formatDate = (dateStr) => {
-    if (!dateStr) return "";
-    const d = new Date(dateStr);
-    const now = new Date();
-    const diff = now - d;
-    if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
-    if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
-    if (diff < 604800000) return `${Math.floor(diff / 86400000)}d ago`;
-    return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-  };
-
-  const visibleUsed = showAllUsed ? used : used.slice(0, 5);
-
-  if (loading) {
-    return (
-      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", background: T.bg }}>
-        <span style={{ fontFamily: F, fontSize: 13, color: T.ink3 }}>Loading...</span>
-      </div>
-    );
+    setGenerating(false)
   }
 
-  return (
-    <div style={{ flex: 1, overflow: "auto", background: T.bg }}>
-      <div style={{ maxWidth: 520, margin: "0 auto", padding: "24px 16px 80px" }}>
-        <h1 style={{ fontFamily: S, fontSize: 26, color: T.ink, fontWeight: 400, margin: "0 0 24px" }}>Invites</h1>
+  const revoke = async (codeId) => {
+    if (!profileId || !codeId) return
+    setRevokingId(codeId)
+    try {
+      const res = await fetch('/api/invite', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ profileId, codeId }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data?.error || 'revoke_failed')
+      setPending(prev => ({
+        ...prev,
+        rows: prev.rows.filter(r => r.id !== codeId),
+      }))
+      setCounts(prev => ({ ...prev, pending: Math.max(0, prev.pending - 1) }))
+      if (expandedId === codeId) setExpandedId(null)
+    } catch (err) {
+      console.error('[INVITE_REVOKE_ERROR]', err)
+    }
+    setRevokingId(null)
+  }
 
-        {/* YOUR INVITE CODES */}
-        <div style={{ marginBottom: 32 }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-            <h2 style={{ fontFamily: F, fontSize: 12, fontWeight: 700, color: T.ink3, textTransform: "uppercase", letterSpacing: ".08em", margin: 0 }}>Your Invite Codes</h2>
-            {!unlimitedInvites && <span style={{ fontFamily: F, fontSize: 11, color: T.ink3 }}>{unused.length}/{MAX_UNUSED} slots used</span>}
+  const saveNote = async (codeId) => {
+    try {
+      await fetch('/api/invite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ codeId, inviterNote: noteText.trim() }),
+      })
+      setPending(prev => ({
+        ...prev,
+        rows: prev.rows.map(r => r.id === codeId ? { ...r, inviter_note: noteText.trim() } : r),
+      }))
+      setEditingNoteId(null)
+    } catch (err) {
+      console.error('[INVITE_NOTE_SAVE_ERROR]', err)
+    }
+  }
+
+  const copy = (text, id) => {
+    copyToClipboard(text)
+    setCopiedId(id)
+    setTimeout(() => setCopiedId(null), 2000)
+  }
+
+  const share = (code, id) => {
+    const msg = `Join me on curators.ai with this exclusive invite code: ${code}`
+    if (navigator.share) {
+      navigator.share({ text: msg }).catch(() => {})
+    } else {
+      copyToClipboard(msg)
+      setShareToast(id)
+      setTimeout(() => setShareToast(null), 2500)
+    }
+  }
+
+  const limitReached = !unlimitedInvites && counts.pending >= MAX_UNUSED_INVITES
+  const tab = activeTab === 'pending' ? pending : used
+
+  // ── Sticky header ──
+  const headerNode = (
+    <div style={{
+      position: 'sticky', top: 0, zIndex: 1,
+      background: T.bg, paddingTop: 24, paddingBottom: 12,
+      borderBottom: `1px solid ${T.bdr}`,
+      marginBottom: 12,
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+        <h1 style={{ fontFamily: S, fontSize: 26, color: T.ink, fontWeight: 400, margin: 0 }}>Invites</h1>
+        <button
+          onClick={generate}
+          disabled={generating || limitReached}
+          style={{
+            padding: '8px 14px', borderRadius: 8, border: 'none',
+            background: limitReached ? T.s : T.acc,
+            color: limitReached ? T.ink3 : T.accText,
+            fontFamily: F, fontSize: 13, fontWeight: 600,
+            cursor: (generating || limitReached) ? 'default' : 'pointer',
+            opacity: generating ? 0.6 : 1,
+          }}
+        >
+          {generating ? 'Generating...' : '+ Generate'}
+        </button>
+      </div>
+      <div style={{ fontFamily: F, fontSize: 12, color: T.ink3 }}>
+        {counts.pending} pending · {counts.used} used
+        {!unlimitedInvites && ` · ${counts.pending}/${MAX_UNUSED_INVITES} slots`}
+      </div>
+    </div>
+  )
+
+  // ── Pending row ──
+  const renderPendingRow = (row) => {
+    const expanded = expandedId === row.id
+    const editing = editingNoteId === row.id
+    return (
+      <div key={row.id} style={{
+        borderRadius: 10, background: T.s, border: `1px solid ${T.bdr}`,
+        marginBottom: 6, overflow: 'hidden',
+      }}>
+        <div
+          onClick={() => toggleExpand(row.id)}
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            gap: 10, padding: '10px 14px', cursor: 'pointer',
+          }}
+        >
+          <div style={{
+            fontFamily: MN, fontSize: 14, fontWeight: 600, color: T.ink, letterSpacing: '.04em',
+            flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          }}>
+            {row.code}
           </div>
-
-          {unlimitedInvites || unused.length < MAX_UNUSED ? (
-            <button onClick={generateNew} disabled={generating} style={{
-              width: "100%", padding: "12px", borderRadius: 10, border: `1px dashed ${T.bdr}`,
-              background: "transparent", color: T.acc, fontSize: 13, fontWeight: 600,
-              cursor: generating ? "default" : "pointer", fontFamily: F, marginBottom: 12,
-              opacity: generating ? 0.6 : 1,
-            }}>{generating ? "Generating..." : "+ Generate new code"}</button>
-          ) : (
-            <div style={{
-              padding: "12px 14px", borderRadius: 10, background: T.s,
-              border: `1px solid ${T.bdr}`, marginBottom: 12,
-              fontFamily: F, fontSize: 12, color: T.ink3, lineHeight: 1.5,
-            }}>You have {MAX_UNUSED} pending invites. A slot opens when someone uses a code.</div>
-          )}
-
-          {unused.length === 0 && (
-            <div style={{ padding: "20px 0", textAlign: "center", fontFamily: F, fontSize: 13, color: T.ink3 }}>
-              No pending invite codes. Generate one above.
-            </div>
-          )}
-
-          {unused.map(code => (
-            <div key={code.id} style={{
-              padding: "14px 16px", borderRadius: 12, background: T.s,
-              border: `1px solid ${T.bdr}`, marginBottom: 8,
-            }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: code.inviter_note ? 6 : 0 }}>
-                <div style={{ fontFamily: MN, fontSize: 16, fontWeight: 700, color: T.ink, letterSpacing: ".04em" }}>{code.code}</div>
-                <div style={{ display: "flex", gap: 6 }}>
-                  <button onClick={() => copyCode(code)} style={{
-                    padding: "6px 12px", borderRadius: 6, border: `1px solid ${T.bdr}`,
-                    background: copiedId === code.id ? T.accSoft : T.bg, color: copiedId === code.id ? T.acc : T.ink2,
-                    fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: F,
-                  }}>{copiedId === code.id ? "\u2713 Copied" : "Copy"}</button>
-                  <button onClick={() => shareCode(code)} style={{
-                    padding: "6px 12px", borderRadius: 6, border: `1px solid ${T.bdr}`,
-                    background: T.bg, color: T.ink2,
-                    fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: F,
-                  }}>Share</button>
-                </div>
-              </div>
-
-              {shareToast === code.id && (
-                <div style={{ fontFamily: F, fontSize: 11, color: T.acc, textAlign: "center", marginTop: 6, fontWeight: 500 }}>{"\u2713"} Message copied — paste it anywhere to share.</div>
-              )}
-
-              {code.inviter_note && showNoteFor !== code.id && (
-                <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4 }}>
-                  <span style={{ fontFamily: F, fontSize: 12, color: T.ink3, fontStyle: "italic", flex: 1 }}>"{code.inviter_note}"</span>
-                  <button onClick={() => { setShowNoteFor(code.id); setNoteText(code.inviter_note || ""); }} style={{
-                    background: "none", border: "none", color: T.ink3, fontSize: 11, cursor: "pointer", fontFamily: F, padding: "2px 4px",
-                  }}>Edit</button>
-                </div>
-              )}
-
-              {!code.inviter_note && showNoteFor !== code.id && (
-                <button onClick={() => { setShowNoteFor(code.id); setNoteText(""); }} style={{
-                  background: "none", border: "none", color: T.ink3, fontSize: 11, cursor: "pointer",
-                  fontFamily: F, padding: "4px 0 0", marginTop: 4,
-                }}>+ Add note</button>
-              )}
-
-              {showNoteFor === code.id && (
-                <div style={{ marginTop: 8 }}>
-                  <textarea
-                    value={noteText}
-                    onChange={e => setNoteText(e.target.value)}
-                    placeholder="What makes them a great curator?"
-                    rows={2}
-                    style={{
-                      width: "100%", padding: "10px 12px", borderRadius: 8,
-                      border: `1.5px solid ${T.bdr}`, fontSize: 13, fontFamily: F,
-                      outline: "none", resize: "none", background: T.bg, color: T.ink,
-                      lineHeight: 1.4,
-                    }}
-                    autoFocus
-                  />
-                  <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
-                    <button onClick={() => saveNote(code.id)} style={{
-                      padding: "6px 12px", borderRadius: 6, border: "none",
-                      background: T.acc, color: T.accText, fontSize: 11, fontWeight: 600,
-                      cursor: "pointer", fontFamily: F,
-                    }}>Save</button>
-                    <button onClick={() => setShowNoteFor(null)} style={{
-                      padding: "6px 12px", borderRadius: 6, border: `1px solid ${T.bdr}`,
-                      background: T.bg, color: T.ink3, fontSize: 11, cursor: "pointer", fontFamily: F,
-                    }}>Cancel</button>
-                  </div>
-                </div>
-              )}
-
-              {noteSaved === code.id && (
-                <div style={{ marginTop: 4, fontFamily: F, fontSize: 11, color: T.acc }}>{"\u2713"} Note saved</div>
-              )}
-            </div>
-          ))}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+            <span style={{ fontFamily: F, fontSize: 11, color: T.ink3 }}>{formatRelative(row.created_at)}</span>
+            <span style={{ color: T.ink3, fontSize: 10 }}>{expanded ? '▾' : '▸'}</span>
+          </div>
         </div>
-
-        {/* USED CODES */}
-        {used.length > 0 && (
-          <div>
-            <h2 style={{ fontFamily: F, fontSize: 12, fontWeight: 700, color: T.ink3, textTransform: "uppercase", letterSpacing: ".08em", margin: "0 0 14px" }}>Used Codes</h2>
-
-            {visibleUsed.map(code => (
-              <div key={code.id} style={{
-                padding: "12px 16px", borderRadius: 12, background: T.s,
-                border: `1px solid ${T.bdr}`, marginBottom: 8, opacity: 0.7,
-              }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                  <div style={{ fontFamily: MN, fontSize: 14, color: T.ink3, letterSpacing: ".04em" }}>{code.code}</div>
-                  <span style={{ fontFamily: F, fontSize: 11, color: T.ink3 }}>{formatDate(code.used_at)}</span>
-                </div>
-                {(code.profile_name || code.profile_handle) && (
-                  <div style={{ marginTop: 4, fontFamily: F, fontSize: 12, color: T.ink2 }}>
-                    Used by {code.profile_name || code.profile_handle}{code.profile_handle ? ` (@${code.profile_handle.replace("@", "")})` : ""}
-                  </div>
-                )}
-                {code.inviter_note && (
-                  <div style={{ marginTop: 2, fontFamily: F, fontSize: 11, color: T.ink3, fontStyle: "italic" }}>"{code.inviter_note}"</div>
-                )}
+        {expanded && (
+          <div style={{ padding: '10px 14px 12px', borderTop: `1px solid ${T.bdr}` }}>
+            {!editing && row.inviter_note && (
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6, marginBottom: 10 }}>
+                <span style={{ flex: 1, fontFamily: F, fontSize: 12, color: T.ink2, fontStyle: 'italic', lineHeight: 1.4 }}>
+                  "{row.inviter_note}"
+                </span>
+                <button onClick={() => { setEditingNoteId(row.id); setNoteText(row.inviter_note || '') }} style={{
+                  background: 'none', border: 'none', color: T.ink3, fontSize: 11, cursor: 'pointer', fontFamily: F, padding: 0,
+                }}>Edit</button>
               </div>
-            ))}
+            )}
+            {!editing && !row.inviter_note && (
+              <button onClick={() => { setEditingNoteId(row.id); setNoteText('') }} style={{
+                background: 'none', border: 'none', color: T.ink3, fontSize: 11, cursor: 'pointer', fontFamily: F,
+                padding: '0 0 10px',
+              }}>+ Add note</button>
+            )}
+            {editing && (
+              <div style={{ marginBottom: 10 }}>
+                <textarea
+                  value={noteText}
+                  onChange={e => setNoteText(e.target.value)}
+                  placeholder="What makes them a great curator?"
+                  rows={2}
+                  autoFocus
+                  style={{
+                    width: '100%', padding: '8px 10px', borderRadius: 6,
+                    border: `1.5px solid ${T.bdr}`, fontSize: 12, fontFamily: F,
+                    outline: 'none', resize: 'none', background: T.bg, color: T.ink,
+                    lineHeight: 1.4, boxSizing: 'border-box',
+                  }}
+                />
+                <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
+                  <button onClick={() => saveNote(row.id)} style={{
+                    padding: '5px 10px', borderRadius: 6, border: 'none',
+                    background: T.acc, color: T.accText, fontSize: 11, fontWeight: 600,
+                    cursor: 'pointer', fontFamily: F,
+                  }}>Save</button>
+                  <button onClick={() => setEditingNoteId(null)} style={{
+                    padding: '5px 10px', borderRadius: 6, border: `1px solid ${T.bdr}`,
+                    background: 'transparent', color: T.ink3, fontSize: 11, cursor: 'pointer', fontFamily: F,
+                  }}>Cancel</button>
+                </div>
+              </div>
+            )}
 
-            {used.length > 5 && !showAllUsed && (
-              <button onClick={() => setShowAllUsed(true)} style={{
-                width: "100%", padding: "10px", borderRadius: 8, border: `1px solid ${T.bdr}`,
-                background: "transparent", color: T.ink3, fontSize: 12, cursor: "pointer",
-                fontFamily: F, marginTop: 4,
-              }}>Show all {used.length} used codes</button>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button onClick={() => copy(row.code, row.id)} style={{
+                padding: '6px 12px', borderRadius: 6, border: `1px solid ${T.bdr}`,
+                background: copiedId === row.id ? T.accSoft : T.bg,
+                color: copiedId === row.id ? T.acc : T.ink2,
+                fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: F,
+              }}>{copiedId === row.id ? '✓ Copied' : 'Copy'}</button>
+              <button onClick={() => share(row.code, row.id)} style={{
+                padding: '6px 12px', borderRadius: 6, border: `1px solid ${T.bdr}`,
+                background: T.bg, color: T.ink2,
+                fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: F,
+              }}>Share</button>
+              <div style={{ flex: 1 }} />
+              <button
+                onClick={() => revoke(row.id)}
+                disabled={revokingId === row.id}
+                style={{
+                  padding: '6px 12px', borderRadius: 6, border: '1px solid #E85C5C40',
+                  background: 'transparent', color: '#E85C5C',
+                  fontSize: 11, fontWeight: 600, cursor: revokingId === row.id ? 'default' : 'pointer',
+                  fontFamily: F, opacity: revokingId === row.id ? 0.6 : 1,
+                }}
+              >
+                {revokingId === row.id ? 'Revoking...' : 'Revoke'}
+              </button>
+            </div>
+            {shareToast === row.id && (
+              <div style={{ marginTop: 6, fontFamily: F, fontSize: 11, color: T.acc, fontWeight: 500 }}>
+                ✓ Message copied — paste it anywhere to share.
+              </div>
             )}
           </div>
         )}
       </div>
+    )
+  }
+
+  // ── Used row ──
+  const renderUsedRow = (row) => {
+    const expanded = expandedId === row.id
+    const handle = row.profile_handle ? `@${row.profile_handle.replace('@', '')}` : null
+    return (
+      <div key={row.id} style={{
+        borderRadius: 10, background: T.s, border: `1px solid ${T.bdr}`,
+        marginBottom: 6, overflow: 'hidden',
+      }}>
+        <div
+          onClick={() => toggleExpand(row.id)}
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            gap: 10, padding: '10px 14px', cursor: 'pointer',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, flex: 1 }}>
+            <div style={{
+              fontFamily: MN, fontSize: 13, color: T.ink3, letterSpacing: '.04em', flexShrink: 0,
+            }}>
+              {row.code}
+            </div>
+            {handle && (
+              <div style={{
+                fontFamily: F, fontSize: 12, color: T.ink2,
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              }}>
+                {handle}
+              </div>
+            )}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+            <span style={{ fontFamily: F, fontSize: 11, color: T.ink3 }}>{formatRelative(row.used_at)}</span>
+            <span style={{ color: T.ink3, fontSize: 10 }}>{expanded ? '▾' : '▸'}</span>
+          </div>
+        </div>
+        {expanded && (
+          <div style={{ padding: '10px 14px 12px', borderTop: `1px solid ${T.bdr}` }}>
+            {row.profile_name && (
+              <div style={{ fontFamily: F, fontSize: 12, color: T.ink, marginBottom: 4 }}>
+                {row.profile_name}{handle ? ` (${handle})` : ''}
+              </div>
+            )}
+            {row.inviter_note && (
+              <div style={{ fontFamily: F, fontSize: 12, color: T.ink2, fontStyle: 'italic', lineHeight: 1.4, marginBottom: 4 }}>
+                "{row.inviter_note}"
+              </div>
+            )}
+            <div style={{ fontFamily: F, fontSize: 11, color: T.ink3 }}>
+              Joined {new Date(row.used_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+            </div>
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  const showLoading = !tab.loaded && tab.loading
+  const showEmpty = tab.loaded && tab.rows.length === 0
+  const emptyText = activeTab === 'pending'
+    ? 'No pending invite codes. Generate one above.'
+    : 'No one has used your invites yet.'
+
+  return (
+    <div style={{ flex: 1, overflow: 'auto', background: T.bg }}>
+      <div style={{ maxWidth: 520, margin: '0 auto', padding: '0 16px 80px' }}>
+        {headerNode}
+
+        <SegmentedControl
+          options={[
+            { id: 'used', label: 'Used' },
+            { id: 'pending', label: 'Pending' },
+          ]}
+          active={activeTab}
+          onChange={onTabChange}
+          style={{ marginBottom: 16 }}
+        />
+
+        {showLoading && (
+          <div style={{ padding: '24px 0', textAlign: 'center', fontFamily: F, fontSize: 13, color: T.ink3 }}>
+            Loading...
+          </div>
+        )}
+
+        {showEmpty && (
+          <div style={{ padding: '24px 0', textAlign: 'center', fontFamily: F, fontSize: 13, color: T.ink3 }}>
+            {emptyText}
+          </div>
+        )}
+
+        {!showLoading && !showEmpty && tab.rows.map(row =>
+          activeTab === 'pending' ? renderPendingRow(row) : renderUsedRow(row)
+        )}
+
+        {tab.hasMore && (
+          <button
+            onClick={() => loadMore(activeTab)}
+            disabled={tab.loading}
+            style={{
+              width: '100%', padding: '10px', borderRadius: 8,
+              border: `1px solid ${T.bdr}`, background: 'transparent',
+              color: T.ink3, fontSize: 12, cursor: tab.loading ? 'default' : 'pointer',
+              fontFamily: F, marginTop: 8, opacity: tab.loading ? 0.6 : 1,
+            }}
+          >
+            {tab.loading ? 'Loading...' : 'Show more'}
+          </button>
+        )}
+      </div>
     </div>
-  );
+  )
 }
