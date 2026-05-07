@@ -112,7 +112,7 @@ function TagsInput({ tags, setTags, tagInput, setTagInput, suggestions, onAccept
     <div style={{ marginBottom: 14 }}>
       <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 8 }}>
         <span style={{ fontSize: 11, fontWeight: 500, color: T.ink2, textTransform: "uppercase", letterSpacing: ".08em", fontFamily: F }}>Tags</span>
-        <span style={{ fontSize: 11, color: T.ink3, fontFamily: F }}>optional · Lens will infer</span>
+        <span style={{ fontSize: 11, color: T.ink3, fontFamily: F }}>Enter or comma to add more</span>
       </div>
       <div style={{
         display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center",
@@ -152,7 +152,7 @@ function TagsInput({ tags, setTags, tagInput, setTagInput, suggestions, onAccept
       </div>
       {suggestions.length > 0 && (
         <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center", marginTop: 8 }}>
-          <span style={{ fontSize: 11, color: T.ink3, fontFamily: F, textTransform: "uppercase", letterSpacing: ".08em" }}>Lens suggests:</span>
+          <span style={{ fontSize: 11, color: T.ink3, fontFamily: F, textTransform: "uppercase", letterSpacing: ".08em" }}>Suggested:</span>
           {suggestions.map((s) => (
             <button
               key={s}
@@ -813,17 +813,17 @@ export default function QuickCaptureSheet({ isOpen, onClose, onSaved, defaultVis
     </div>
   );
 
-  const titleHelper = titleAutoFilled
-    ? "from link · edit if needed"
-    : (attachedLinks.length === 0 ? "Adding a link first will prefill the title." : null);
+  const titleHint = (() => {
+    if (attachedLinks.length > 0 && titleAutoFilled) return "from link · edit if needed";
+    if (attachedLinks.length > 0 && !title) return "auto-filled from link";
+    return null;
+  })();
 
   const writeupPlaceholder = (attachedLinks.length === 0 && attachedImages.length === 0)
     ? "What's good about it? Drop a thought, a paragraph, or a longer writeup..."
     : "A line or two on why this...";
 
-  const categoryHint = categoryAutoFilled
-    ? "· suggested by Lens · tap to change"
-    : "optional · Lens will infer";
+  const categoryHint = (category && categoryAutoFilled) ? "· tap to change" : null;
 
   const showImageOverrideOnFirstLink = attachedLinks.length > 0 && attachedImages.length > 0;
   const firstLinkId = attachedLinks[0]?.id;
@@ -840,8 +840,8 @@ export default function QuickCaptureSheet({ isOpen, onClose, onSaved, defaultVis
         {/* Header */}
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, marginBottom: 20 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 17, fontWeight: 600, color: T.ink, fontFamily: F }}>Recommend something great</div>
-            <div style={{ fontSize: 12, color: T.ink3, fontFamily: F, marginTop: 4 }}>Add a link, image, or just write.</div>
+            <div style={{ fontSize: 17, fontWeight: 600, color: T.ink, fontFamily: F }}>Recommendation</div>
+            <div style={{ fontSize: 12, color: T.ink3, fontFamily: F, marginTop: 4 }}>Everything you save is added to your Record</div>
           </div>
           <button
             onClick={handleCancel}
@@ -859,161 +859,179 @@ export default function QuickCaptureSheet({ isOpen, onClose, onSaved, defaultVis
           </button>
         </div>
 
-        {/* Title (primary) */}
+        {/* Title (primary) — textarea with inline action row */}
         <div style={{ marginBottom: 20 }}>
-          {sectionLabel("Title", { required: true })}
-          <input
-            ref={titleInputRef}
-            value={title}
-            onChange={(e) => { setTitle(e.target.value); setTitleAutoFilled(false); }}
-            placeholder="What are you recommending?"
-            disabled={saving}
-            style={{
-              width: "100%", padding: "14px 16px", borderRadius: 8,
-              border: `1px solid ${T.bdr}`, fontSize: 17, fontFamily: F, fontWeight: 500,
-              background: T.bg2, color: T.ink, outline: "none",
-              boxSizing: "border-box", lineHeight: 1.4,
-            }}
-          />
-          {titleHelper && (
-            <div style={{ fontSize: 11, color: T.ink3, fontFamily: F, marginTop: 6 }}>
-              {titleHelper}
-            </div>
-          )}
-        </div>
-
-        {/* Attachments */}
-        <div style={{ marginBottom: 20, paddingTop: 20, borderTop: `1px solid ${T.bdr}` }}>
-          {sectionLabel("Attachments", { hint: "optional" })}
-
-          {/* Existing link cards */}
-          {attachedLinks.map((link) => (
-            <LinkCard
-              key={link.id}
-              link={link}
-              onRemove={() => removeLink(link.id)}
-              showImageOverride={showImageOverrideOnFirstLink && link.id === firstLinkId}
-              onToggleImageOverride={(v) => toggleLinkImageOverride(link.id, v)}
-              saving={saving}
+          <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 8 }}>
+            <span style={{ fontSize: 11, fontWeight: 500, color: T.ink2, textTransform: "uppercase", letterSpacing: ".08em", fontFamily: F }}>
+              What you are recommending
+              <span style={{ color: T.acc, fontWeight: 600, fontSize: 12, marginLeft: 4 }}>*</span>
+            </span>
+            {titleHint && (
+              <span style={{ fontSize: 11, color: T.ink3, fontFamily: F }}>{titleHint}</span>
+            )}
+          </div>
+          <div style={{ background: T.bg2, border: `1px solid ${T.bdr}`, borderRadius: 10, padding: 4 }}>
+            <textarea
+              ref={titleInputRef}
+              value={title}
+              onChange={(e) => { setTitle(e.target.value); setTitleAutoFilled(false); }}
+              placeholder="Name what you're recommending"
+              rows={2}
+              disabled={saving}
+              style={{
+                width: "100%",
+                background: "transparent",
+                border: "none",
+                fontFamily: F, fontSize: 15, fontWeight: 500,
+                color: T.ink,
+                padding: "14px 16px 6px 16px",
+                lineHeight: 1.5,
+                outline: "none",
+                resize: "vertical",
+                minHeight: 60,
+                boxSizing: "border-box",
+                display: "block",
+              }}
             />
-          ))}
-
-          {/* Existing image cards */}
-          {attachedImages.map((image, idx) => (
-            <ImageCard
-              key={image.id}
-              image={image}
-              isPrimary={idx === 0 && !attachedLinks.length}
-              deferredNote={idx > 0 ? "Only the first image is saved as the rec thumbnail right now." : null}
-              onRemove={() => removeImage(image.id)}
-              saving={saving}
-            />
-          ))}
-
-          {/* Inline link input */}
-          {showLinkInput && (
-            <div style={{
-              display: "flex", gap: 8, alignItems: "center",
-              marginBottom: 8, padding: 8,
-              background: T.bg2, border: `1px solid ${T.bdr}`, borderRadius: 8,
-            }}>
-              <input
-                ref={linkInputRef}
-                value={linkInputValue}
-                onChange={(e) => setLinkInputValue(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && URL_REGEX.test(linkInputValue.trim())) {
-                    e.preventDefault();
-                    attachUrl(linkInputValue.trim());
-                  } else if (e.key === "Escape") {
-                    setShowLinkInput(false);
-                    setLinkInputValue("");
-                  }
-                }}
-                placeholder="Paste or type a URL"
-                disabled={linkLoading || saving}
-                style={{
-                  flex: 1, padding: "10px 12px", borderRadius: 6,
-                  border: `1px solid ${T.bdr}`, fontSize: 14, fontFamily: F,
-                  background: T.s, color: T.ink, outline: "none", minWidth: 0,
-                }}
-              />
-              {linkLoading ? (
-                <div style={{
-                  width: 16, height: 16, borderRadius: 8,
-                  border: `2px solid ${T.bdr}`, borderTopColor: T.acc,
-                  animation: "qcSpin 700ms linear infinite",
-                }} />
-              ) : (
-                <button
-                  onClick={() => attachUrl(linkInputValue.trim())}
-                  disabled={!URL_REGEX.test(linkInputValue.trim()) || saving}
-                  style={{
-                    padding: "8px 14px", borderRadius: 6, border: "none",
-                    background: URL_REGEX.test(linkInputValue.trim()) ? T.acc : T.s2,
-                    color: URL_REGEX.test(linkInputValue.trim()) ? T.accText : T.ink3,
-                    fontSize: 13, fontFamily: F, fontWeight: 500,
-                    cursor: URL_REGEX.test(linkInputValue.trim()) ? "pointer" : "default",
-                  }}
-                >Add</button>
-              )}
+            <div style={{ display: "flex", gap: 8, padding: "8px 12px 10px 12px" }}>
               <button
-                onClick={() => { setShowLinkInput(false); setLinkInputValue(""); }}
-                aria-label="Cancel"
+                type="button"
+                onClick={() => { setShowLinkInput(true); setError(null); }}
+                disabled={saving || showLinkInput}
                 style={{
-                  width: 28, height: 28, borderRadius: 14, border: "none", background: "transparent",
-                  color: T.ink3, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14,
+                  padding: "6px 12px",
+                  background: "transparent",
+                  border: `1px solid ${T.bdr}`,
+                  borderRadius: 8,
+                  color: T.ink2,
+                  fontSize: 12, fontFamily: F, fontWeight: 500,
+                  cursor: saving || showLinkInput ? "default" : "pointer",
+                  display: "inline-flex", alignItems: "center", gap: 6,
+                  opacity: showLinkInput ? 0.5 : 1,
                 }}
-              >×</button>
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={T.acc} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                  <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                </svg>
+                Link
+              </button>
+              <button
+                type="button"
+                onClick={() => imageInputRef.current?.click()}
+                disabled={saving}
+                style={{
+                  padding: "6px 12px",
+                  background: "transparent",
+                  border: `1px solid ${T.bdr}`,
+                  borderRadius: 8,
+                  color: T.ink2,
+                  fontSize: 12, fontFamily: F, fontWeight: 500,
+                  cursor: saving ? "default" : "pointer",
+                  display: "inline-flex", alignItems: "center", gap: 6,
+                }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={T.acc} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                  <circle cx="8.5" cy="8.5" r="1.5" />
+                  <polyline points="21 15 16 10 5 21" />
+                </svg>
+                Image
+              </button>
+              <input
+                ref={imageInputRef}
+                type="file"
+                accept={ACCEPTED_IMAGE_MIMES}
+                multiple
+                onChange={handleImageFileChange}
+                style={{ display: "none" }}
+                disabled={saving}
+              />
             </div>
-          )}
-
-          {/* Add buttons */}
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <button
-              type="button"
-              onClick={() => { setShowLinkInput(true); setError(null); }}
-              disabled={saving || showLinkInput}
-              style={{
-                flex: 1, minWidth: 140,
-                padding: "12px 14px", borderRadius: 8,
-                background: T.bg2, border: `1px solid ${T.bdr}`,
-                color: T.ink, fontSize: 13, fontFamily: F, fontWeight: 500,
-                cursor: saving || showLinkInput ? "default" : "pointer",
-                display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8,
-                opacity: showLinkInput ? 0.5 : 1,
-              }}
-            >
-              <span style={{ color: T.acc, fontSize: 14, lineHeight: 1 }}>↗</span>
-              {attachedLinks.length === 0 ? "Add link" : "Add another link"}
-            </button>
-            <button
-              type="button"
-              onClick={() => imageInputRef.current?.click()}
-              disabled={saving}
-              style={{
-                flex: 1, minWidth: 140,
-                padding: "12px 14px", borderRadius: 8,
-                background: T.bg2, border: `1px solid ${T.bdr}`,
-                color: T.ink, fontSize: 13, fontFamily: F, fontWeight: 500,
-                cursor: saving ? "default" : "pointer",
-                display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8,
-              }}
-            >
-              <span style={{ color: T.acc, fontSize: 14, lineHeight: 1 }}>◱</span>
-              {attachedImages.length === 0 ? "Add image" : "Add another image"}
-            </button>
-            <input
-              ref={imageInputRef}
-              type="file"
-              accept={ACCEPTED_IMAGE_MIMES}
-              multiple
-              onChange={handleImageFileChange}
-              style={{ display: "none" }}
-              disabled={saving}
-            />
           </div>
         </div>
+
+        {/* Attached items — unlabeled, conditional */}
+        {(attachedLinks.length > 0 || attachedImages.length > 0 || showLinkInput) && (
+          <div style={{ marginTop: 16 }}>
+            {attachedLinks.map((link) => (
+              <LinkCard
+                key={link.id}
+                link={link}
+                onRemove={() => removeLink(link.id)}
+                showImageOverride={showImageOverrideOnFirstLink && link.id === firstLinkId}
+                onToggleImageOverride={(v) => toggleLinkImageOverride(link.id, v)}
+                saving={saving}
+              />
+            ))}
+            {attachedImages.map((image, idx) => (
+              <ImageCard
+                key={image.id}
+                image={image}
+                isPrimary={idx === 0 && !attachedLinks.length}
+                deferredNote={idx > 0 ? "Only the first image is saved as the rec thumbnail right now." : null}
+                onRemove={() => removeImage(image.id)}
+                saving={saving}
+              />
+            ))}
+            {showLinkInput && (
+              <div style={{
+                display: "flex", gap: 8, alignItems: "center",
+                marginBottom: 8, padding: 8,
+                background: T.bg2, border: `1px solid ${T.bdr}`, borderRadius: 8,
+              }}>
+                <input
+                  ref={linkInputRef}
+                  value={linkInputValue}
+                  onChange={(e) => setLinkInputValue(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && URL_REGEX.test(linkInputValue.trim())) {
+                      e.preventDefault();
+                      attachUrl(linkInputValue.trim());
+                    } else if (e.key === "Escape") {
+                      setShowLinkInput(false);
+                      setLinkInputValue("");
+                    }
+                  }}
+                  placeholder="Paste or type a URL"
+                  disabled={linkLoading || saving}
+                  style={{
+                    flex: 1, padding: "10px 12px", borderRadius: 6,
+                    border: `1px solid ${T.bdr}`, fontSize: 14, fontFamily: F,
+                    background: T.s, color: T.ink, outline: "none", minWidth: 0,
+                  }}
+                />
+                {linkLoading ? (
+                  <div style={{
+                    width: 16, height: 16, borderRadius: 8,
+                    border: `2px solid ${T.bdr}`, borderTopColor: T.acc,
+                    animation: "qcSpin 700ms linear infinite",
+                  }} />
+                ) : (
+                  <button
+                    onClick={() => attachUrl(linkInputValue.trim())}
+                    disabled={!URL_REGEX.test(linkInputValue.trim()) || saving}
+                    style={{
+                      padding: "8px 14px", borderRadius: 6, border: "none",
+                      background: URL_REGEX.test(linkInputValue.trim()) ? T.acc : T.s2,
+                      color: URL_REGEX.test(linkInputValue.trim()) ? T.accText : T.ink3,
+                      fontSize: 13, fontFamily: F, fontWeight: 500,
+                      cursor: URL_REGEX.test(linkInputValue.trim()) ? "pointer" : "default",
+                    }}
+                  >Add</button>
+                )}
+                <button
+                  onClick={() => { setShowLinkInput(false); setLinkInputValue(""); }}
+                  aria-label="Cancel"
+                  style={{
+                    width: 28, height: 28, borderRadius: 14, border: "none", background: "transparent",
+                    color: T.ink3, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14,
+                  }}
+                >×</button>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Why */}
         <div style={{ marginBottom: 20, paddingTop: 20, borderTop: `1px solid ${T.bdr}` }}>
