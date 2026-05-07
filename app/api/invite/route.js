@@ -67,14 +67,6 @@ export async function GET(request) {
     console.log(`[INVITE] profileId=${profileId} unlimited_invites=${curatorProfile?.unlimited_invites} resolved=${unlimitedInvites}`);
 
     const mode = searchParams.get("mode");
-    const isHistory = searchParams.get("history") === "1";
-
-    if (isHistory) {
-      // Deprecated branch. SettingsView is the only caller and is being
-      // removed in a follow-up commit. Returning empty array keeps it silent
-      // until that ships. Delete this branch when SettingsView is updated.
-      return NextResponse.json({ history: [], unlimitedInvites });
-    }
 
     if (mode === "all") {
       const status = searchParams.get("status") === "used" ? "used" : "pending";
@@ -182,8 +174,9 @@ export async function GET(request) {
       });
     }
 
-    // No flags: legacy "current shareable code" path. Still used by InviteModal
-    // until commit 3 retires it.
+    // No flags: legacy "current shareable code" path. No remaining caller in
+    // this codebase — kept defensively in case any stray client still hits it.
+    // Safe to delete in a follow-up.
     const { data: unusedCodes } = await sb
       .from("invite_codes")
       .select("id, code, inviter_note")
