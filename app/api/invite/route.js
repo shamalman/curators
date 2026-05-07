@@ -47,7 +47,7 @@ function generateCode() {
   return `CURATORS-${rand}`;
 }
 
-// GET: paginated invite list (mode=all) or current shareable code (no flags).
+// GET: paginated invite list. Requires mode=all; any other shape returns 400.
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -174,43 +174,7 @@ export async function GET(request) {
       });
     }
 
-    // No flags: legacy "current shareable code" path. No remaining caller in
-    // this codebase — kept defensively in case any stray client still hits it.
-    // Safe to delete in a follow-up.
-    const { data: unusedCodes } = await sb
-      .from("invite_codes")
-      .select("id, code, inviter_note")
-      .eq("created_by", profileId)
-      .is("used_at", null)
-      .order("created_at", { ascending: false });
-
-    const unused = unusedCodes || [];
-
-    if (unused.length > 0) {
-      return NextResponse.json({ code: unused[0], unusedCount: unused.length, unlimitedInvites });
-    }
-
-    const newCode = generateCode();
-    const { data: created, error: insertErr } = await sb
-      .from("invite_codes")
-      .insert({ code: newCode, created_by: profileId })
-      .select("id, code, inviter_note")
-      .single();
-
-    if (insertErr) {
-      console.error("Failed to create invite code:", insertErr);
-      return NextResponse.json({ error: "Failed to generate code" }, { status: 500 });
-    }
-
-    console.log('TRACKING: sent an invite (GET), profileId:', profileId);
-    const { error: trackingError } = await sb.from('profiles').update({
-      last_seen_at: new Date().toISOString(),
-      last_action: 'sent an invite',
-      last_action_at: new Date().toISOString()
-    }).eq('id', profileId);
-    if (trackingError) console.error('TRACKING ERROR:', trackingError);
-
-    return NextResponse.json({ code: created, unusedCount: 1, unlimitedInvites });
+    return NextResponse.json({ error: "missing mode parameter" }, { status: 400 });
   } catch (error) {
     console.error("Invite fetch error:", error);
     return NextResponse.json({ error: "Failed to fetch invite" }, { status: 500 });
