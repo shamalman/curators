@@ -202,6 +202,9 @@ Notes: Append-only log of ignored inferences. curator-only (RLS). source_url lin
 | used_at | timestamptz | YES |
 | created_at | timestamptz | YES |
 | inviter_note | text | YES |
+| revoked_at | timestamptz | YES |
+
+Notes: revoked_at is set when curator revokes an unused code. Pending = used_at IS NULL AND revoked_at IS NULL.
 
 ## subscriptions
 | Column | Type | Nullable |
