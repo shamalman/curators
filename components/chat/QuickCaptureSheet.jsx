@@ -242,7 +242,7 @@ function LinkCard({ link, onRemove, showImageOverride, onToggleImageOverride, sa
   );
 }
 
-function ImageCard({ image, isPrimary, deferredNote, onRemove, saving }) {
+function ImageCard({ image, isPrimary, onRemove, saving }) {
   return (
     <div style={{
       display: "flex", alignItems: "center", gap: 12,
@@ -258,9 +258,11 @@ function ImageCard({ image, isPrimary, deferredNote, onRemove, saving }) {
         <div style={{ fontSize: 13, fontWeight: 600, color: T.ink, fontFamily: F, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           {image.file?.name || "Uploaded image"}
         </div>
-        <div style={{ fontSize: 11, color: T.ink3, fontFamily: F, marginTop: 4 }}>
-          {isPrimary ? "Primary thumbnail" : (deferredNote || "")}
-        </div>
+        {isPrimary && (
+          <div style={{ fontSize: 11, color: T.ink3, fontFamily: F, marginTop: 4 }}>
+            Primary thumbnail
+          </div>
+        )}
       </div>
       <button
         onClick={onRemove}
@@ -522,6 +524,41 @@ export default function QuickCaptureSheet({ isOpen, onClose, onSaved, defaultVis
     if (files.length === 0) return;
     setError(null);
 
+    const noLinks = attachedLinks.length === 0;
+    const NO_LINK_LIMIT_MSG = "Add a link first to attach more than one image.";
+
+    // No-link case: hard-cap to a single image total.
+    if (noLinks) {
+      if (attachedImages.length >= 1) {
+        setError(NO_LINK_LIMIT_MSG);
+        return;
+      }
+      // attachedImages is empty — accept only the first valid file, drop the rest.
+      const first = files[0];
+      if (!first.type.startsWith("image/")) {
+        setError("Only image files are supported.");
+        return;
+      }
+      if (first.size > MAX_IMAGE_BYTES) {
+        setError(`"${first.name}" is too large — max 5MB.`);
+        return;
+      }
+      const accepted = [{
+        id: makeId("img"),
+        file: first,
+        previewUrl: URL.createObjectURL(first),
+        sha256: null,
+        ref: null,
+        mimeType: first.type,
+        sizeBytes: first.size,
+        uploaded: false,
+      }];
+      setAttachedImages(accepted);
+      if (files.length > 1) setError(NO_LINK_LIMIT_MSG);
+      return;
+    }
+
+    // Link present: multi-image allowed (existing behavior).
     const accepted = [];
     for (const file of files) {
       if (!file.type.startsWith("image/")) {
@@ -657,7 +694,7 @@ export default function QuickCaptureSheet({ isOpen, onClose, onSaved, defaultVis
   }
 
   async function saveCaseUpload() {
-    // CASE B: image(s) only, no links. First image is primary; additional deferred.
+    // CASE B: image only, no links. (Picker is hard-capped to one image when no link.)
     const primary = attachedImages[0];
     if (!primary) throw new Error("No image attached.");
 
@@ -967,7 +1004,6 @@ export default function QuickCaptureSheet({ isOpen, onClose, onSaved, defaultVis
                 key={image.id}
                 image={image}
                 isPrimary={idx === 0 && !attachedLinks.length}
-                deferredNote={idx > 0 ? "Only the first image is saved as the rec thumbnail right now." : null}
                 onRemove={() => removeImage(image.id)}
                 saving={saving}
               />
