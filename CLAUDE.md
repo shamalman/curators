@@ -2,7 +2,7 @@
 
 Operating manual for Claude Code in this repo. Loaded every session, so it stays lean. Architecture details live in `docs/` — referenced inline below.
 
-Last reviewed: May 5, 2026.
+Last reviewed: May 7, 2026.
 
 ---
 
@@ -45,28 +45,26 @@ User-facing surfaces use new framing. Code, schema, and logs use legacy names. *
 3. **No silent `catch {}`.** Surface errors with a `[FEATURE_ERROR]` log marker.
 4. **No Supabase join aliases.** Use two-step queries.
 5. **After new DB columns/tables:** run `NOTIFY pgrst, 'reload schema';` in Supabase SQL Editor. PostgREST silently drops unknown columns without this.
-6. **No em dashes** in AI skill files, prompt text, or AI output. No spaced hyphens as substitutes either. Model partial-compliance: still slips `**Header** —` connectors (LENS-004).
+6. **No em dashes** in AI skill files, prompt text, AI output, or any user-facing copy across Curators.AI. No spaced hyphens as substitutes either. Models will slip `**Header** —` connectors; check generated output.
 7. **Verify column existence** before writing queries against unfamiliar tables. See `docs/schema.md`.
 8. **Add RLS policies** for new write operations.
 9. **Deploy one change at a time.** Each deploy independently testable on iPhone Safari.
 10. **Descriptive commit messages.**
 11. **Hard refresh Safari** after deploys. After module-state changes, force a fresh build (empty commit + push) and wait 5–10 min for Fluid Compute warm instances to cycle. Symptom: alternating old/new behavior on back-to-back requests = fleet rollout in progress, not a bug.
 12. **Always normalize handles.** Use `normalizeHandle()` from `lib/handles.js` for ALL handle comparisons.
-13. **Reuse existing auth patterns.** Copy from `app/api/ai-response-ratings/route.js:17-40`. Don't invent new auth shapes.
+13. **Reuse existing auth patterns.** Copy the cookie-session + `auth_user_id` lookup pattern from `app/api/ai-response-ratings/route.js` or `app/api/invite/route.js` (DELETE handler). Don't invent new auth shapes.
 14. **No tests, no local builds.** A cron route blocks `npm run build` locally. Verify by deploying to Vercel and curling the live route.
 15. **Pull before pushing in long sessions.** Multiple in-flight commits across sessions cause local main to drift behind origin. Always `git pull --ff-only` before testing or running scripts.
 
 ---
 
-## Multi-Deploy Session Pattern
+## Working Patterns
 
-When a session involves multiple coupled changes (prompt rewrite + auth fix + data regen):
-
-- **Sequence one deploy at a time** with explicit "STOP and confirm before next deploy" instructions between each.
-- **Verify each deploy against production**, not the build log. Curl the actual changed route.
-- **For prompt rewrites: regenerate one entity first**, paste output for review, then proceed.
-- **For Record work specifically:** read `lib/taste-profile/generate.js` and the latest `taste_profiles.content` row before proposing changes. The prompt and output are the source of truth, not the architecture doc.
-- **Local main drifts behind origin across sessions.** Run `git status` and `git log --oneline -5` at session start.
+- **Recon before implement.** Read actual files, run SQL to confirm columns, confirm function signatures. Build a "confirm before writing" checklist before writing any handoff.
+- **Paste-ready Claude Code prompts.** Architecture/strategy in Claude.ai; execution via paste-ready prompts in Claude Code. Investigation prompts first, fix prompts second.
+- **One deploy at a time.** Sequence coupled changes with explicit "STOP and verify before next deploy" gates. Verify each against production, not the build log — curl the actual changed route.
+- **For prompt rewrites**: regenerate one entity first, paste output for review, then proceed.
+- **For Record work specifically**: read `lib/taste-profile/generate.js` and the latest `taste_profiles.content` row before proposing changes. The prompt and output are the source of truth, not the architecture doc.
 
 ---
 
@@ -79,6 +77,16 @@ Four tabs: Lens (`/myai`) → Me (`/me`) → Find (`/find`) → Subs (`/subs`). 
 Nav: `components/layout/BottomTabs.jsx` (mobile), `components/layout/Sidebar.jsx` (desktop).
 
 Me tab segmented control: `/me` (My Recs) → `/me/taste` (Personal Record) → `/{handle}` (Public Profile). Find tab: Network / Subscribed / Saved. `/recommendations` permanently redirects to `/find`.
+
+### Data Model
+
+Conceptual relationships (full column types in `docs/schema.md`):
+
+- **`auth.users` ↔ `profiles`** via `profiles.auth_user_id`. Auth row is created at signup; profile row at onboarding submit. Every server handler that needs the curator looks up `profiles WHERE auth_user_id = session.user.id`.
+- **`profiles` ↔ `recommendations` ↔ `rec_files`** — `recommendations.profile_id` is the curator; `recommendations.rec_file_id` points at the canonical content blob.
+- **`profiles` ↔ `subscriptions` ↔ `profiles`** — `subscriptions.subscriber_id` and `subscriptions.curator_id` are directional labels, not identity labels. Every user can be both.
+- **`profiles` ↔ `invite_codes`** — `created_by` (the inviter), `used_by` (the new curator), `revoked_at` (soft-revoke). Pending = `used_at IS NULL AND revoked_at IS NULL`.
+- **`taste_profiles`** — generated per profile, regenerates on rec save and Read confirmation. See Record Pipeline.
 
 ### Rec Storage — Two-table dual-write
 
@@ -119,21 +127,22 @@ Hard cap: `SYSTEM_PROMPT_HARD_CAP = 180K`. Link handling synchronous, up to 3 UR
 
 Three-option URL-drop block emits unconditionally on URL drops (Save as Recommendation / Add to Record / Just talk about it).
 
-**Post-save reflection** lives at `ChatView.jsx` lines 227 + 850. **If post-save behavior drifts, debug `ChatView.jsx` FIRST. Do not start with skill files.**
-
 Full mechanics, tool use, re-injection, charter: `docs/chat-route.md`.
-
-**History replay (server-fetched, May 5 2026 — commit `89f113d`):** The replay loop no longer reads from the client-supplied `history` array. The chat route server-fetches the last 10 `chat_messages` rows by `profile_id` and rebuilds replay from those. Server-fetch is harder to spoof and avoids client/server schema drift. Future edits to replay logic must not re-introduce client-trust patterns.
-
-**Image continuity across turns (commit `89f113d`):** After the existing `parsed_content` UPDATE block, a parallel UPDATE patches the latest `role='user'` row's `meta` column with `imageRecCandidate.{ sha256, artifactPath, mimeType }`. This is the same nested shape already used on assistant rows. On history replay, this shape is read and used to rehydrate images via `sb.storage.from('artifacts').download()`. Subset of fields only — `signedUrl`, `inferred`, `sizeBytes` are excluded as not needed for replay. Implementation chose `chat_messages.meta jsonb` over a new column to avoid the PostgREST schema-cache reload step (which has burned this project before).
-
-**Feedback `type` persistence (commit `d419fd6`):** `feedback.type` is persisted by prefixing the `summary` column. The original handoff doc misdiagnosed this as a column-name mismatch — actual issue was the `type` field being silently dropped during extraction. Also added `handle` column on the same commit.
 
 ### AI Skills System
 
-17 skill files in `lib/prompts/skills/`, mirrored to `lib/prompts/skills/staging/` for the staging AI lane. Build functions: `buildOnboardingPrompt`, `buildStandardPrompt`. `loadSkill(name, aiProfile)` reads from stable or staging path.
+Skills live under `lib/prompts/skills/`. Three lanes:
+- **Stable** — `lib/prompts/skills/*.md`, loaded by all curators
+- **Staging** — `lib/prompts/skills/staging/*.md`, gated by `profiles.ai_profile = 'staging'`
+- **Tester** — gated by `profiles.is_tester = true` (currently @shamal, @chris). Use this column for tester-only feature flags; never hardcode handle checks.
 
-**Lens Charter** lives at `lib/prompts/skills/staging/charter.md`. Loads FIRST in staging prompt builders. Stable path is byte-identical (spread evaluates to `[]`).
+**Lens Charter** at `lib/prompts/skills/staging/charter.md` loads FIRST in staging prompt builders. Defines turn branches (Capture, Discover, Talk-through), banned behaviors, and the direct-ask exception. Stable path is byte-identical (charter spread evaluates to `[]`).
+
+**Charter does NOT apply to taste-read surfaces.** Those are isolated by design (see Read Pipeline).
+
+**Date and Record context.** Chat route prepends today's date to the system prompt. When the Record is injected, it's wrapped with reference-document framing so the model knows it's reading curator history, not user-authored input.
+
+**Agent vs process prompts.** Treat agent system prompts (chat, Read, generation) and process prompts (parsers, classifiers) differently. Agent prompts get charter and full skill stack; process prompts get only the minimum context they need to do their job. Don't cross-contaminate.
 
 Full skill system: `docs/ai-skills.md`. Staging lane: `docs/staging-lane.md`.
 
@@ -153,11 +162,36 @@ Feedback: `FeedbackSheet.jsx` → `/api/feedback/route.js` with optional screens
 
 Full mechanics: `docs/notifications.md`.
 
+### Invite System
+
+Single source of truth: `/invite`. Settings has no invite UI. `InviteModal.jsx` was deleted; Sidebar and CuratorShell route to `/invite` directly.
+
+- **Page**: `app/(curator)/invite/page.js` — sticky header with counts and Generate button, `Pending | Used` tabs, `Show more` pagination (10/page), pending rows always expanded with note + Copy/Share/Revoke, used rows collapsed by default.
+- **API**: `app/api/invite/route.js`. `GET` requires `?mode=all&status=pending|used&offset=&limit=`; bare GET returns 400. `POST { action: 'generate' }` or `POST { codeId, inviterNote }` for note save. `DELETE { codeId, profileId }` for soft-revoke (cookie-auth + ownership check).
+- **Cap**: `MAX_UNUSED_INVITES` exported from `lib/constants.js` (currently 25). Bypassed when `profiles.unlimited_invites = true`.
+- **Signup TOCTOU**: `app/signup/page.js` validates `revoked_at IS NULL` upfront and re-filters on the redeem `UPDATE`. If the redeem update affects zero rows (code revoked mid-flow), abort path calls `POST /api/auth/cleanup-orphan` (best-effort), `signOut()`, and throws.
+- **Cleanup endpoint**: `app/api/auth/cleanup-orphan/route.js` deletes orphan `auth.users` + `profiles` rows. Verifies ownership (cookie session must match `authUserId`), orphan window (< 5 min old), and zero recommendations before deleting.
+
 ### Source Parsers
 
 9 parsers in `lib/agent/parsers/`: Spotify, Apple Music, YouTube, SoundCloud, Letterboxd, Goodreads, Google Maps, Twitter/X, Generic Webpage (Defuddle universal fallback). Instagram and Bandcamp deferred.
 
-**⚠️ Caution — PARSER-007 (open):** Spotify Strategy C in `lib/agent/parsers/spotify.js` has timing logs from commit `a839311` but Strategy C is silently NOT firing in production. Production verification on May 5 across five Spotify track parses showed Strategy B `hasArtist:false` on four cases (gate condition demonstrably true) but zero `[SPOTIFY] track: strategy C entry` log lines. Do not assume Strategy C is operational. Root cause unknown — diagnostic in flight. See roadmap §4 PARSER-007.
+---
+
+## Design System
+
+**Color tokens** in `lib/constants.js`:
+- **`T`** — base theme (warm dark). Default for all curator surfaces.
+- **`W`** — curator workspace (cooler/blue-shifted). Used for chat surfaces.
+- **`V`** — visitor AI (warm/personal). Used for visitor surfaces.
+
+Each exports `bg`, `bg2`, `s`, `s2`, `s3`, `ink`, `ink2`, `ink3`, `bdr`, `acc`, `accText`, `accSoft`.
+
+**Fonts**: `F` Manrope (body/UI), `S` Newsreader (display/headings), `MN` JetBrains Mono (codes, IDs).
+
+**Inline styles only** — no Tailwind. Token references like `T.bg`, `T.ink`, `F` come from `lib/constants.js` imports at the top of each file.
+
+**Shared UI primitives** live under `components/ui/`. Wrap-and-customize is the pattern: `components/me/MeSegmentedControl.jsx` wraps `components/ui/SegmentedControl.jsx` with Me-tab-specific routing. When you find yourself copying inline styles between two components, extract a primitive into `components/ui/`.
 
 ---
 
@@ -166,8 +200,10 @@ Full mechanics: `docs/notifications.md`.
 ```
 components/layout/BottomTabs.jsx           mobile nav
 components/me/MeSegmentedControl.jsx       Me tab 3-button nav
+components/ui/SegmentedControl.jsx         shared tab/segment primitive
 app/(curator)/me/taste/page.js             Personal Record (TasteFileView)
 app/(curator)/me/timeline/page.js          Verbatim ledger
+app/(curator)/invite/page.js               invite system UI (single source of truth)
 app/api/chat/route.js                      mode detection, link handling, Read short-circuit
 app/api/taste-read/route.js                Read chip generation (skill + parsed_content only)
 app/api/taste-read/{confirm,refine,ignore} chip persistence + Record regen triggers
@@ -176,6 +212,8 @@ app/api/notify/new-rec/route.js            real-time subscriber notifications
 app/api/feedback/route.js                  feedback + screenshot
 app/api/ai-response-ratings/route.js       auth pattern reference
 app/api/admin/transcripts/route.js         admin allowlist
+app/api/invite/route.js                    invite API: GET paginated, POST generate/note, DELETE revoke
+app/api/auth/cleanup-orphan/route.js       orphan account cleanup on signup TOCTOU abort
 lib/prompts/onboarding.js, standard.js     system prompt builders
 lib/prompts/loader.js                      loadSkill(name, aiProfile)
 lib/prompts/skills/taste-read.md           Read chip skill (stable)
@@ -187,6 +225,7 @@ lib/chat/stats-tool.js                     get_curator_stats tool
 lib/rec-files/build.js                     buildRecFileRow (single source of truth)
 lib/rec-files/ingest.js                    ingestUrlCapture (never throws)
 lib/handles.js                             normalizeHandle (REQUIRED for all handle comparisons)
+lib/constants.js                           T/W/V tokens, F/S/MN fonts, MAX_UNUSED_INVITES
 lib/taste-profile/generate.js              Record generation
 lib/taste-profile/parse.js                 extractPublicSections, extractVoiceAndStyle
 lib/email-templates.js                     all email templates
@@ -199,11 +238,25 @@ scripts/regenerate-taste-profile.mjs       manual regen — requires --profile f
 
 ---
 
+## Intentional Non-Refactors
+
+These zones look like they need cleanup but don't. Touch only with explicit reason.
+
+- **`app/api/taste-read/route.js`** — Strict isolation: skill + parsed_content only, no Record or recs injection. Chips are the user's confirmation step, not the model's prediction step. Charter does NOT apply here. Don't propose adding context.
+- **`ChatView.jsx` lines ~227 + ~850** — Post-save reflection injection. If post-save behavior drifts, debug here FIRST, before skill files. (Line numbers will drift; grep for the constraint string to locate.)
+- **`app/api/invite/route.js` GET/POST handlers** — Trust `profileId` from query/body without auth. Pre-existing tech debt; the DELETE handler uses the correct cookie-session pattern. New handlers should match DELETE, not GET/POST.
+
+---
+
 ## Log Markers
 
-`[TASTE_READ_V2]`, `[TIMELINE]`, `[rec-files]`, `[chat-parse-ingest]`, `[taste-profile]`, `[NOTIFY_NEW_REC]`, `[NOTIFY_SKIPPED]`, `[INVITER_CONTEXT]`, `[AUTO_SUBSCRIBE]`, `[UPDATE_REC_FILE]`, `[AI_PROFILE]`, `[SKILL_LOAD]`, `[AI_RATING]`, `[FEEDBACK_SCREENSHOT_UPLOADED]`, `[ADMIN_TRANSCRIPTS_ACCESS]`, `[TASTE_READ_REINJECTION]`, `[IMAGE_META_PERSIST]`, `[IMAGE_META_PERSIST_ERROR]`, `[HISTORY_FETCH_ERROR]`, `[IMAGE_REHYDRATE]`, `[IMAGE_REHYDRATE_ERROR]`. Each has `_ERROR` / `_FAILED` / `_UNDO` variants.
+Active markers follow `[FEATURE_NAME]` and `[FEATURE_NAME_ERROR]` / `_FAILED` / `_UNDO` conventions. To enumerate:
 
-`[taste-profile] SUBSCRIBER-ONLY BRANCH activated` payload: `{ profileId, handle, confirmationCount, subscriptionCount }`. Monitor in production for first real subscriber-only Records.
+```bash
+grep -rhE '\[[A-Z_]+\]' app/ lib/ components/ --include="*.js" --include="*.jsx" | grep -oE '\[[A-Z_]+\]' | sort -u
+```
+
+Notable: `[taste-profile] SUBSCRIBER-ONLY BRANCH activated` payload `{ profileId, handle, confirmationCount, subscriptionCount }` — monitor in production for first real subscriber-only Records.
 
 ---
 
@@ -223,29 +276,21 @@ Full schema with column types: `docs/schema.md`. Rec files migration: `docs/rec-
 
 ---
 
-## What's Not Wired Yet
+## Local Dev Verification
 
-- Validations input to Record generation (forward-spec'd in `docs/record-architecture.md`)
-- Saves-of-others input to Record generation (`saved_recs` exists, not read by `generateTasteProfile`)
-- `buildSubscriberPrompt` — skill exists, no build function or route wiring
-- Visitor prompt not extracted to skill system
-- AI web search for link lookup
-- Pure email subscriber digests — deferred until public launch
-- Light mode (P3 roadmap)
-- Read regen batching — currently each chip fires immediate regen; will need 60s debounce when volume warrants
+`npm run build` is blocked locally by a cron route. Workarounds for verifying changes before push:
+
+- **Syntax check JS**: `node --check path/to/file.js`
+- **Syntax check JSX**: `npx tsc --noEmit --jsx preserve --allowJs --target esnext --module esnext --moduleResolution node --resolveJsonModule --skipLibCheck --noResolve path/to/file.jsx`
+- **Manual read** — confirm imports resolve, JSX is balanced, all referenced state hooks are declared.
+
+Real verification is `git push` + Vercel deploy + curl the live route. After deploy, hard-refresh Safari. After module-state changes, force a fresh build (empty commit + push) and wait 5–10 min for Fluid Compute warm instances to cycle.
 
 ---
 
-## Open Engineering Tickets
+## Open Work
 
-- **READ-DRIFT (RESOLVED May 4, commit `28988ae`):** Per-URL Read endpoint stripped of Record + recs injection. Chips now generated from `skill + parsed_content` only.
-- **CHAT-VERBOSITY (RESOLVED May 5, commit `429407a`):** Chat route now strips `tasteProfileBlock` and `recsContext` injection on URL-drop turns. Gate is `parsedLinkBlocks.length > 0` (covers successful, partial, and failed parses; covers all three button-picker turns; correctly excludes follow-on conversational turns). Conversational turns retain full Record + recs context. Per roadmap §3d, Option A.
-- **LENS-004 (RESOLVED May 5, commit `4784c70`):** Added explicit DO NOT WRITE / INSTEAD WRITE example block adjacent to existing em-dash ban in `lib/taste-profile/generate.js`. Verified clean across @shamal v119, @chris v26, @bradbarrish v9, @testmctesty v5 (including SUBSCRIBER-ONLY branch). Rule generalized beyond Domains. Patterns subheads also adopted `**Header**:` format. Per roadmap §3e, Option A.
-- **TASTE-PROFILE-VOICE-STYLE (P3):** Voice & Style section can drop in subscriber-only branch.
-- **INVITE-001 (P3):** Signup invite-code lookup is case-sensitive.
-- **PARSER-003 (P2):** Spotify Strategy C observability gap on `/api/chat` concurrent parse path.
-- **LENS-005 (RESOLVED May 5, commit `c721307`):** Server-side post-processing of Stats `Last updated:` line in `lib/taste-profile/generate.js`. After model returns markdown, regex-replace the line with authoritative server-side date. Fires `[LENS-005]` console.warn when override is non-trivial (model wrote a different date). Verified clean across all four profiles (@bradbarrish v10, @shamal v120, @chris v27, @testmctesty v6). Watch Vercel logs for `[LENS-005]` warnings to learn actual drift base rate in production traffic.
-- **LENS-006 (observation, no fix needed):** LENS-004 example block (added to Domains-section RULES) generalized to Patterns subheads as well. This is desired behavior. The formatting rule should apply broadly. Future prompt edits to `lib/taste-profile/generate.js` RULES block should expect cross-section influence.
+Roadmap and open tickets live in the Claude.ai project files (not in this repo). Update the roadmap doc there when shipping changes that affect P0/P1 items.
 
 ---
 
