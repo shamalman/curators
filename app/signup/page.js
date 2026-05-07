@@ -76,6 +76,21 @@ export default function SignupPage() {
       if (updateErr) console.error("Failed to mark invite as used:", updateErr)
       if (!updateErr && (!redeemed || redeemed.length === 0)) {
         console.error("Invite redemption blocked: code revoked mid-flow", { inviteId: invite.id })
+        // Attempt to clean up the orphan auth user + profile created in earlier steps.
+        // Best-effort: if cleanup fails, we still sign out and abort; the orphan is
+        // recoverable manually but the user-facing flow must not block on this.
+        try {
+          const { data: { user: authUser } } = await supabase.auth.getUser()
+          if (authUser) {
+            await fetch('/api/auth/cleanup-orphan', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ authUserId: authUser.id }),
+            })
+          }
+        } catch (cleanupErr) {
+          console.error('Orphan cleanup failed (non-blocking):', cleanupErr)
+        }
         await supabase.auth.signOut()
         throw new Error("Invalid or already used invite code")
       }
