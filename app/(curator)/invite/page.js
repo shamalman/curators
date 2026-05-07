@@ -35,7 +35,7 @@ function copyToClipboard(text) {
 
 export default function InvitePage() {
   const { profileId } = useContext(CuratorContext)
-  const [activeTab, setActiveTab] = useState('used')
+  const [activeTab, setActiveTab] = useState('pending')
   const [pending, setPending] = useState(emptyTab)
   const [used, setUsed] = useState(emptyTab)
   const [counts, setCounts] = useState({ pending: 0, used: 0 })
@@ -98,7 +98,7 @@ export default function InvitePage() {
 
   useEffect(() => {
     if (!profileId) return
-    loadFirstPage('used')
+    loadFirstPage('pending')
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profileId])
 
@@ -234,112 +234,107 @@ export default function InvitePage() {
   )
 
   // ── Pending row ──
+  // Pending rows render their body unconditionally (no collapse). The header
+  // shows code + created date; the body always shows note + actions.
   const renderPendingRow = (row) => {
-    const expanded = expandedId === row.id
     const editing = editingNoteId === row.id
     return (
       <div key={row.id} style={{
         borderRadius: 10, background: T.s, border: `1px solid ${T.bdr}`,
         marginBottom: 6, overflow: 'hidden',
       }}>
-        <div
-          onClick={() => toggleExpand(row.id)}
-          style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            gap: 10, padding: '10px 14px', cursor: 'pointer',
-          }}
-        >
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          gap: 10, padding: '10px 14px',
+        }}>
           <div style={{
             fontFamily: MN, fontSize: 14, fontWeight: 600, color: T.ink, letterSpacing: '.04em',
             flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
           }}>
             {row.code}
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-            <span style={{ fontFamily: F, fontSize: 11, color: T.ink3 }}>{formatRelative(row.created_at)}</span>
-            <span style={{ color: T.ink3, fontSize: 10 }}>{expanded ? '▾' : '▸'}</span>
-          </div>
+          <span style={{ fontFamily: F, fontSize: 11, color: T.ink3, flexShrink: 0 }}>
+            {formatRelative(row.created_at)}
+          </span>
         </div>
-        {expanded && (
-          <div style={{ padding: '10px 14px 12px', borderTop: `1px solid ${T.bdr}` }}>
-            {!editing && row.inviter_note && (
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6, marginBottom: 10 }}>
-                <span style={{ flex: 1, fontFamily: F, fontSize: 12, color: T.ink2, fontStyle: 'italic', lineHeight: 1.4 }}>
-                  "{row.inviter_note}"
-                </span>
-                <button onClick={() => { setEditingNoteId(row.id); setNoteText(row.inviter_note || '') }} style={{
-                  background: 'none', border: 'none', color: T.ink3, fontSize: 11, cursor: 'pointer', fontFamily: F, padding: 0,
-                }}>Edit</button>
-              </div>
-            )}
-            {!editing && !row.inviter_note && (
-              <button onClick={() => { setEditingNoteId(row.id); setNoteText('') }} style={{
-                background: 'none', border: 'none', color: T.ink3, fontSize: 11, cursor: 'pointer', fontFamily: F,
-                padding: '0 0 10px',
-              }}>+ Add note</button>
-            )}
-            {editing && (
-              <div style={{ marginBottom: 10 }}>
-                <textarea
-                  value={noteText}
-                  onChange={e => setNoteText(e.target.value)}
-                  placeholder="What makes them a great curator?"
-                  rows={2}
-                  autoFocus
-                  style={{
-                    width: '100%', padding: '8px 10px', borderRadius: 6,
-                    border: `1.5px solid ${T.bdr}`, fontSize: 12, fontFamily: F,
-                    outline: 'none', resize: 'none', background: T.bg, color: T.ink,
-                    lineHeight: 1.4, boxSizing: 'border-box',
-                  }}
-                />
-                <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
-                  <button onClick={() => saveNote(row.id)} style={{
-                    padding: '5px 10px', borderRadius: 6, border: 'none',
-                    background: T.acc, color: T.accText, fontSize: 11, fontWeight: 600,
-                    cursor: 'pointer', fontFamily: F,
-                  }}>Save</button>
-                  <button onClick={() => setEditingNoteId(null)} style={{
-                    padding: '5px 10px', borderRadius: 6, border: `1px solid ${T.bdr}`,
-                    background: 'transparent', color: T.ink3, fontSize: 11, cursor: 'pointer', fontFamily: F,
-                  }}>Cancel</button>
-                </div>
-              </div>
-            )}
-
-            <div style={{ display: 'flex', gap: 6 }}>
-              <button onClick={() => copy(row.code, row.id)} style={{
-                padding: '6px 12px', borderRadius: 6, border: `1px solid ${T.bdr}`,
-                background: copiedId === row.id ? T.accSoft : T.bg,
-                color: copiedId === row.id ? T.acc : T.ink2,
-                fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: F,
-              }}>{copiedId === row.id ? '✓ Copied' : 'Copy'}</button>
-              <button onClick={() => share(row.code, row.id)} style={{
-                padding: '6px 12px', borderRadius: 6, border: `1px solid ${T.bdr}`,
-                background: T.bg, color: T.ink2,
-                fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: F,
-              }}>Share</button>
-              <div style={{ flex: 1 }} />
-              <button
-                onClick={() => revoke(row.id)}
-                disabled={revokingId === row.id}
-                style={{
-                  padding: '6px 12px', borderRadius: 6, border: '1px solid #E85C5C40',
-                  background: 'transparent', color: '#E85C5C',
-                  fontSize: 11, fontWeight: 600, cursor: revokingId === row.id ? 'default' : 'pointer',
-                  fontFamily: F, opacity: revokingId === row.id ? 0.6 : 1,
-                }}
-              >
-                {revokingId === row.id ? 'Revoking...' : 'Revoke'}
-              </button>
+        <div style={{ padding: '10px 14px 12px', borderTop: `1px solid ${T.bdr}` }}>
+          {!editing && row.inviter_note && (
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6, marginBottom: 10 }}>
+              <span style={{ flex: 1, fontFamily: F, fontSize: 12, color: T.ink2, fontStyle: 'italic', lineHeight: 1.4 }}>
+                "{row.inviter_note}"
+              </span>
+              <button onClick={() => { setEditingNoteId(row.id); setNoteText(row.inviter_note || '') }} style={{
+                background: 'none', border: 'none', color: T.ink3, fontSize: 11, cursor: 'pointer', fontFamily: F, padding: 0,
+              }}>Edit</button>
             </div>
-            {shareToast === row.id && (
-              <div style={{ marginTop: 6, fontFamily: F, fontSize: 11, color: T.acc, fontWeight: 500 }}>
-                ✓ Message copied — paste it anywhere to share.
+          )}
+          {!editing && !row.inviter_note && (
+            <button onClick={() => { setEditingNoteId(row.id); setNoteText('') }} style={{
+              background: 'none', border: 'none', color: T.ink3, fontSize: 11, cursor: 'pointer', fontFamily: F,
+              padding: '0 0 10px',
+            }}>+ Add note</button>
+          )}
+          {editing && (
+            <div style={{ marginBottom: 10 }}>
+              <textarea
+                value={noteText}
+                onChange={e => setNoteText(e.target.value)}
+                placeholder="What makes them a great curator?"
+                rows={2}
+                autoFocus
+                style={{
+                  width: '100%', padding: '8px 10px', borderRadius: 6,
+                  border: `1.5px solid ${T.bdr}`, fontSize: 12, fontFamily: F,
+                  outline: 'none', resize: 'none', background: T.bg, color: T.ink,
+                  lineHeight: 1.4, boxSizing: 'border-box',
+                }}
+              />
+              <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
+                <button onClick={() => saveNote(row.id)} style={{
+                  padding: '5px 10px', borderRadius: 6, border: 'none',
+                  background: T.acc, color: T.accText, fontSize: 11, fontWeight: 600,
+                  cursor: 'pointer', fontFamily: F,
+                }}>Save</button>
+                <button onClick={() => setEditingNoteId(null)} style={{
+                  padding: '5px 10px', borderRadius: 6, border: `1px solid ${T.bdr}`,
+                  background: 'transparent', color: T.ink3, fontSize: 11, cursor: 'pointer', fontFamily: F,
+                }}>Cancel</button>
               </div>
-            )}
+            </div>
+          )}
+
+          <div style={{ display: 'flex', gap: 6 }}>
+            <button onClick={() => copy(row.code, row.id)} style={{
+              padding: '6px 12px', borderRadius: 6, border: `1px solid ${T.bdr}`,
+              background: copiedId === row.id ? T.accSoft : T.bg,
+              color: copiedId === row.id ? T.acc : T.ink2,
+              fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: F,
+            }}>{copiedId === row.id ? '✓ Copied' : 'Copy'}</button>
+            <button onClick={() => share(row.code, row.id)} style={{
+              padding: '6px 12px', borderRadius: 6, border: `1px solid ${T.bdr}`,
+              background: T.bg, color: T.ink2,
+              fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: F,
+            }}>Share</button>
+            <div style={{ flex: 1 }} />
+            <button
+              onClick={() => revoke(row.id)}
+              disabled={revokingId === row.id}
+              style={{
+                padding: '6px 12px', borderRadius: 6, border: '1px solid #E85C5C40',
+                background: 'transparent', color: '#E85C5C',
+                fontSize: 11, fontWeight: 600, cursor: revokingId === row.id ? 'default' : 'pointer',
+                fontFamily: F, opacity: revokingId === row.id ? 0.6 : 1,
+              }}
+            >
+              {revokingId === row.id ? 'Revoking...' : 'Revoke'}
+            </button>
           </div>
-        )}
+          {shareToast === row.id && (
+            <div style={{ marginTop: 6, fontFamily: F, fontSize: 11, color: T.acc, fontWeight: 500 }}>
+              ✓ Message copied — paste it anywhere to share.
+            </div>
+          )}
+        </div>
       </div>
     )
   }
@@ -414,8 +409,8 @@ export default function InvitePage() {
 
         <SegmentedControl
           options={[
-            { id: 'used', label: 'Used' },
             { id: 'pending', label: 'Pending' },
+            { id: 'used', label: 'Used' },
           ]}
           active={activeTab}
           onChange={onTabChange}

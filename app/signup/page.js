@@ -34,6 +34,7 @@ export default function SignupPage() {
         .select("id, created_by, inviter_note")
         .eq("code", code)
         .is("used_at", null)
+        .is("revoked_at", null)
         .single()
       if (invErr || !invite) {
         console.error("Invite code validation failed:", invErr)
@@ -62,11 +63,22 @@ export default function SignupPage() {
         return
       }
 
-      // Step 4: Mark invite code as used
-      const { error: updateErr } = await supabase.from("invite_codes").update({
-        used_at: new Date().toISOString(),
-      }).eq("id", invite.id)
+      // Step 4: Mark invite code as used. TOCTOU guard — if the code was
+      // revoked between Step 1 (validate) and here, the revoked_at filter
+      // matches zero rows. Abort before any further side effects so the user
+      // sees the same error as a fresh-invalid code.
+      const { data: redeemed, error: updateErr } = await supabase
+        .from("invite_codes")
+        .update({ used_at: new Date().toISOString() })
+        .eq("id", invite.id)
+        .is("revoked_at", null)
+        .select()
       if (updateErr) console.error("Failed to mark invite as used:", updateErr)
+      if (!updateErr && (!redeemed || redeemed.length === 0)) {
+        console.error("Invite redemption blocked: code revoked mid-flow", { inviteId: invite.id })
+        await supabase.auth.signOut()
+        throw new Error("Invalid or already used invite code")
+      }
 
       // Store invite context for onboarding to set invited_by
       if (invite.created_by) {
