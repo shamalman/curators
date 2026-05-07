@@ -600,16 +600,14 @@ export default function QuickCaptureSheet({ isOpen, onClose, onSaved, defaultVis
   }
 
   async function uploadOverrideImage(image) {
-    // Upload via multipart path; title/category required by route, so reuse curator values.
+    // Storage-only upload: we just need the artifact sha + ref to splice into the
+    // link's parsedPayload. No rec/file rows are created here — the link path
+    // creates the rec.
     const fd = new FormData();
     fd.append("file", image.file);
     fd.append("profileId", profileId);
-    fd.append("title", title.trim());
-    fd.append("category", category || "other");
-    if (writeup) fd.append("why", writeup.trim());
-    if (tags.length > 0) fd.append("tags", tags.join(","));
 
-    const res = await fetch("/api/recs/upload", { method: "POST", body: fd });
+    const res = await fetch("/api/recs/upload-artifact", { method: "POST", body: fd });
     if (!res.ok) {
       const errBody = await res.json().catch(() => ({}));
       throw new Error(errBody.error || `Upload failed (${res.status})`);
