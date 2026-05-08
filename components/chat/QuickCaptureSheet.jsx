@@ -222,7 +222,13 @@ function LinkCard({ link, onRemove, showImageOverride, onToggleImageOverride, sa
           }}
         >×</button>
       </div>
-      {showImageOverride && (
+      {/* HIDDEN: image-override render path not built. RecDetail.jsx has no
+          consumer for recommendations.image_url / rec_files.work.image_url
+          when the artifact came from a curator override. Re-enable this
+          checkbox only after the render path is implemented. Save-side
+          wiring (saveCaseUrl override branch + /api/recs/upload-artifact)
+          stays intact. */}
+      {false && showImageOverride && (
         <label style={{
           display: "flex", alignItems: "center", gap: 8,
           paddingTop: 8, borderTop: `1px solid ${T.bdr}`,
