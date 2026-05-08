@@ -15,7 +15,7 @@ const EMPTY = {
   similarRecs: null,
 };
 
-const DEBOUNCE_MS = 800;
+const DEBOUNCE_MS = 500;
 
 function useDebouncedValue(value, ms) {
   const [debounced, setDebounced] = useState(value);

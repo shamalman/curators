@@ -98,7 +98,7 @@ function CategoryChip({ cat, selected, autoFilled, onClick, disabled }) {
   );
 }
 
-function TagsInput({ tags, setTags, tagInput, setTagInput, suggestions, onAcceptSuggestion, saving }) {
+function TagsInput({ tags, setTags, tagInput, setTagInput, suggestions, onAcceptSuggestion, saving, loading }) {
   const handleTagKeyDown = (e) => {
     if (e.key === "Enter" || e.key === ",") {
       e.preventDefault();
@@ -151,6 +151,13 @@ function TagsInput({ tags, setTags, tagInput, setTagInput, suggestions, onAccept
           }}
         />
       </div>
+      {loading && suggestions.length === 0 && (
+        <div style={{ display: "flex", marginTop: 8 }}>
+          <span style={{ fontSize: 11, color: T.ink3, fontFamily: F, fontStyle: "italic" }}>
+            Thinking…
+          </span>
+        </div>
+      )}
       {suggestions.length > 0 && (
         <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center", marginTop: 8 }}>
           <span style={{ fontSize: 11, color: T.ink3, fontFamily: F, textTransform: "uppercase", letterSpacing: ".08em" }}>Suggested:</span>
@@ -400,7 +407,7 @@ export default function QuickCaptureSheet({ isOpen, onClose, onSaved, defaultVis
   // v1 surfaces suggestedTags only. The full envelope is held in scope so
   // future insight surfaces (network echoes, subscriber relevance, category
   // nudge, similar recs) can subscribe without re-plumbing the hook call.
-  const { insights: lensInsights } = useLensInsights({
+  const { insights: lensInsights, loading: lensLoading } = useLensInsights({
     profileId,
     title,
     writeup,
@@ -1143,6 +1150,7 @@ export default function QuickCaptureSheet({ isOpen, onClose, onSaved, defaultVis
               if (!tags.includes(s)) setTags((prev) => [...prev, s]);
             }}
             saving={saving}
+            loading={lensLoading}
           />
         </div>
 
