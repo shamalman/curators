@@ -209,6 +209,8 @@ app/api/taste-read/route.js                Read chip generation (skill + parsed_
 app/api/taste-read/{confirm,refine,ignore} chip persistence + Record regen triggers
 app/api/generate-taste-profile/route.js    authed regen route
 app/api/notify/new-rec/route.js            real-time subscriber notifications
+app/api/recs/lens-insights/route.js        Lens insights endpoint (forward-compat envelope)
+app/api/recs/upload-artifact/route.js      thin storage-only upload (no DB writes)
 app/api/feedback/route.js                  feedback + screenshot
 app/api/ai-response-ratings/route.js       auth pattern reference
 app/api/admin/transcripts/route.js         admin allowlist
@@ -224,13 +226,16 @@ lib/chat/chat-parse-ingest.js              chat URL → rec_files ingest
 lib/chat/stats-tool.js                     get_curator_stats tool
 lib/rec-files/build.js                     buildRecFileRow (single source of truth)
 lib/rec-files/ingest.js                    ingestUrlCapture (never throws)
+lib/lens/insights-prompt.js                Lens insights prompt builder + parser
 lib/handles.js                             normalizeHandle (REQUIRED for all handle comparisons)
 lib/constants.js                           T/W/V tokens, F/S/MN fonts, MAX_UNUSED_INVITES
 lib/taste-profile/generate.js              Record generation
 lib/taste-profile/parse.js                 extractPublicSections, extractVoiceAndStyle
 lib/email-templates.js                     all email templates
 context/CuratorContext.jsx                 addRec dual-write
+hooks/useLensInsights.js                   debounced client hook for /api/recs/lens-insights
 components/chat/ChatView.jsx               chat UI, rec save, post-save injection, Read save handoff
+components/chat/QuickCaptureSheet.jsx      Recommend modal (single-flow, multi-attach)
 components/taste-read/TasteReadCard.jsx    Read card (chip flow)
 components/me/TasteTimeline.jsx            timeline UI
 scripts/regenerate-taste-profile.mjs       manual regen — requires --profile flag
@@ -245,6 +250,7 @@ These zones look like they need cleanup but don't. Touch only with explicit reas
 - **`app/api/taste-read/route.js`** — Strict isolation: skill + parsed_content only, no Record or recs injection. Chips are the user's confirmation step, not the model's prediction step. Charter does NOT apply here. Don't propose adding context.
 - **`ChatView.jsx` lines ~227 + ~850** — Post-save reflection injection. If post-save behavior drifts, debug here FIRST, before skill files. (Line numbers will drift; grep for the constraint string to locate.)
 - **`app/api/invite/route.js` GET/POST handlers** — Trust `profileId` from query/body without auth. Pre-existing tech debt; the DELETE handler uses the correct cookie-session pattern. New handlers should match DELETE, not GET/POST.
+- **CASE C image override render path.** Save side persists artifact ref to `recommendations.image_url` and `rec_files.work.image_url`, but `RecDetail.jsx` has no consumer for those fields. Curator-uploaded thumbnail is durably stored but not displayed. "Use uploaded image as thumbnail" checkbox hidden in modal until render path ships.
 
 ---
 
@@ -256,7 +262,7 @@ Active markers follow `[FEATURE_NAME]` and `[FEATURE_NAME_ERROR]` / `_FAILED` / 
 grep -rhE '\[[A-Z_]+\]' app/ lib/ components/ --include="*.js" --include="*.jsx" | grep -oE '\[[A-Z_]+\]' | sort -u
 ```
 
-Notable: `[taste-profile] SUBSCRIBER-ONLY BRANCH activated` payload `{ profileId, handle, confirmationCount, subscriptionCount }` — monitor in production for first real subscriber-only Records.
+Notable: `[taste-profile] SUBSCRIBER-ONLY BRANCH activated` payload `{ profileId, handle, confirmationCount, subscriptionCount }` — monitor in production for first real subscriber-only Records. `[LENS_INSIGHTS_ERROR]` / `[LENS_INSIGHTS_ROUTE_ERROR]` — Lens prompt or endpoint failure; modal degrades to empty envelope, never 5xx.
 
 ---
 
@@ -291,6 +297,8 @@ Real verification is `git push` + Vercel deploy + curl the live route. After dep
 ## Open Work
 
 Roadmap and open tickets live in the Claude.ai project files (not in this repo). Update the roadmap doc there when shipping changes that affect P0/P1 items.
+
+- **RECMODAL-004 (P3):** Paywalled link metadata extraction. NYTimes, WSJ, FT, etc. return paywall stubs to parse-link, leading to empty body and no auto-fill. Lightweight fix: pull from og:meta tags only on known paywall hosts. Heavier fix: archive/RSS fallback.
 
 ---
 
