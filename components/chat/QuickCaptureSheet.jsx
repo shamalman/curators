@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef } from "react";
 import { T, F, CAT, CATEGORIES } from "@/lib/constants";
 import { useCurator } from "@/context/CuratorContext";
+import { useLensInsights } from "@/hooks/useLensInsights";
 
 const URL_REGEX = /^https?:\/\/[^\s]+$/i;
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
@@ -395,28 +396,18 @@ export default function QuickCaptureSheet({ isOpen, onClose, onSaved, defaultVis
     }
   }, [showLinkInput]);
 
-  // Derived: tag suggestions from attached links' parsedPayloads
-  const tagSuggestions = useMemo(() => {
-    const out = new Set();
-    const taken = new Set(tags.map((t) => t.toLowerCase()));
-    for (const link of attachedLinks) {
-      const pp = link.parsedPayload || {};
-      const candidates = [
-        pp.site_name,
-        link.source,
-        Array.isArray(pp.authors) ? pp.authors[0] : null,
-      ];
-      for (const raw of candidates) {
-        if (!raw || typeof raw !== "string") continue;
-        const norm = raw.trim().toLowerCase();
-        if (!norm) continue;
-        if (taken.has(norm)) continue;
-        if (out.has(norm)) continue;
-        out.add(norm);
-      }
-    }
-    return Array.from(out).slice(0, 4);
-  }, [attachedLinks, tags]);
+  // Lens insights — debounced API call once enough context exists.
+  // v1 surfaces suggestedTags only. The full envelope is held in scope so
+  // future insight surfaces (network echoes, subscriber relevance, category
+  // nudge, similar recs) can subscribe without re-plumbing the hook call.
+  const { insights: lensInsights } = useLensInsights({
+    profileId,
+    title,
+    writeup,
+    link: attachedLinks[0] || null,
+    existingTags: tags,
+  });
+  const tagSuggestions = lensInsights.suggestedTags || [];
 
   if (!isOpen) return null;
 
