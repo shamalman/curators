@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef } from "react";
 import { T, F, CAT, CATEGORIES } from "@/lib/constants";
 import { useCurator } from "@/context/CuratorContext";
+import { useLensInsights } from "@/hooks/useLensInsights";
 
 const URL_REGEX = /^https?:\/\/[^\s]+$/i;
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
@@ -97,7 +98,7 @@ function CategoryChip({ cat, selected, autoFilled, onClick, disabled }) {
   );
 }
 
-function TagsInput({ tags, setTags, tagInput, setTagInput, suggestions, onAcceptSuggestion, saving }) {
+function TagsInput({ tags, setTags, tagInput, setTagInput, suggestions, onAcceptSuggestion, saving, loading }) {
   const handleTagKeyDown = (e) => {
     if (e.key === "Enter" || e.key === ",") {
       e.preventDefault();
@@ -150,6 +151,13 @@ function TagsInput({ tags, setTags, tagInput, setTagInput, suggestions, onAccept
           }}
         />
       </div>
+      {loading && suggestions.length === 0 && (
+        <div style={{ display: "flex", marginTop: 8 }}>
+          <span style={{ fontSize: 11, color: T.ink3, fontFamily: F, fontStyle: "italic" }}>
+            Thinking…
+          </span>
+        </div>
+      )}
       {suggestions.length > 0 && (
         <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center", marginTop: 8 }}>
           <span style={{ fontSize: 11, color: T.ink3, fontFamily: F, textTransform: "uppercase", letterSpacing: ".08em" }}>Suggested:</span>
@@ -395,28 +403,18 @@ export default function QuickCaptureSheet({ isOpen, onClose, onSaved, defaultVis
     }
   }, [showLinkInput]);
 
-  // Derived: tag suggestions from attached links' parsedPayloads
-  const tagSuggestions = useMemo(() => {
-    const out = new Set();
-    const taken = new Set(tags.map((t) => t.toLowerCase()));
-    for (const link of attachedLinks) {
-      const pp = link.parsedPayload || {};
-      const candidates = [
-        pp.site_name,
-        link.source,
-        Array.isArray(pp.authors) ? pp.authors[0] : null,
-      ];
-      for (const raw of candidates) {
-        if (!raw || typeof raw !== "string") continue;
-        const norm = raw.trim().toLowerCase();
-        if (!norm) continue;
-        if (taken.has(norm)) continue;
-        if (out.has(norm)) continue;
-        out.add(norm);
-      }
-    }
-    return Array.from(out).slice(0, 4);
-  }, [attachedLinks, tags]);
+  // Lens insights — debounced API call once enough context exists.
+  // v1 surfaces suggestedTags only. The full envelope is held in scope so
+  // future insight surfaces (network echoes, subscriber relevance, category
+  // nudge, similar recs) can subscribe without re-plumbing the hook call.
+  const { insights: lensInsights, loading: lensLoading } = useLensInsights({
+    profileId,
+    title,
+    writeup,
+    link: attachedLinks[0] || null,
+    existingTags: tags,
+  });
+  const tagSuggestions = lensInsights.suggestedTags || [];
 
   if (!isOpen) return null;
 
@@ -1150,6 +1148,7 @@ export default function QuickCaptureSheet({ isOpen, onClose, onSaved, defaultVis
               if (!tags.includes(s)) setTags((prev) => [...prev, s]);
             }}
             saving={saving}
+            loading={lensLoading}
           />
         </div>
 
