@@ -306,7 +306,15 @@ UI: `components/payouts/ValidationSheet.jsx` (bottom-sheet pattern, copies Feedb
 
 Feature flag helper: `hasFeature(profile, flagName)` in `lib/features.js`. Takes already-loaded profile, no DB roundtrip.
 
-Pending threads (do not implement here): threads/messages substrate, validation email to curator, allocation calculator, earnings surface, Messages segment in Subs, Allocation segment in Subs, Lens monthly prompt.
+Phase 2 (Thread 2) shipped 2026-05-09. Threads/messages substrate live + validation email.
+
+- Tables (migration `007_threads_and_messages.sql`): `threads` (one per `(subscriber_id, curator_id)` pair, unique constraint, `last_message_at` for ordering, CHECK distinct participants) and `thread_messages` (FK to thread + sender, optional `validation_id` link). RLS enabled — both participants can SELECT; INSERT requires caller is a participant. No UPDATE policy on `threads` for participants — `last_message_at` touch from the user route fails silently and is logged as `[THREAD_TOUCH_FAILED]`. Thread 4 to revisit.
+- Validation flow now writes a thread message when `sent_to_curator=true` AND subscriber has feature flag `payout_threads`. Atomic find-or-create via `upsert ... onConflict: 'subscriber_id,curator_id'`. Failures logged as `[VALIDATION_THREAD_WRITE_FAILED]`, non-fatal.
+- Validation email sent to curator when curator has feature flag `payout_email`. Helper: `lib/email/sendValidationReceivedEmail.js` (mirrors `sendNewSubscriberEmail.js` shape — never throws, returns `{ ok, sent | skipped, error?, detail? }`). Template: `validationReceivedEmail` in `lib/email-templates.js`. Curator email sourced via `supabase.auth.admin.getUserById(auth_user_id)`, NOT `profiles.email` (column does not exist). Reply CTA links to `/<curatorHandle>/<recSlug>` — no `/recs/[id]` route exists. Failures logged as `[VALIDATION_EMAIL_FAILED]`, non-fatal.
+- Endpoint: `POST /api/threads/[threadId]/messages`. Auth-gated (anon-key + cookies via `@supabase/ssr`), participant-checked, gated by sender's `payout_threads`. Body: `{ body }`. RLS double-enforces participant check.
+- Two new flags Shamal sets manually via SQL: `payout_threads` (subscriber-side, gates substrate writes + reply endpoint) and `payout_email` (curator-side, gates email send).
+
+Pending (Thread 4+): allocation calculator, earnings surface, Messages segment in Subs (currently Subs has only `subscriptions`/`subscribers` tabs and no query-param routing), Allocation segment in Subs, Lens monthly prompt, threads UPDATE RLS policy for `last_message_at` touch.
 
 ---
 
