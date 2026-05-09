@@ -10,6 +10,8 @@ import { T, F, S, MN, CAT, DEFAULT_TIERS, DEFAULT_BUNDLES, LICENSE_TYPES } from 
 import { useCurator } from "@/context/CuratorContext";
 import { fetchLinkMetadata } from "@/lib/links/fetchLinkMetadata";
 import LinkDisplay from "@/components/shared/LinkDisplay";
+import ValidationSheet from "@/components/payouts/ValidationSheet";
+import { hasFeature } from "@/lib/features";
 
 // Source types whose body_md is just metadata restated, not substantive prose.
 // For these, the Archived Source section adds no information beyond what's
@@ -783,6 +785,34 @@ export function VisitorRecDetail({ slug }) {
   const [tipAmount, setTipAmount] = useState(null);
   const [tipSent, setTipSent] = useState(false);
   const [tipMessage, setTipMessage] = useState("");
+  const [showValidationSheet, setShowValidationSheet] = useState(false);
+  const [viewerProfile, setViewerProfile] = useState(null);
+  const [viewerLoading, setViewerLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          if (!cancelled) { setViewerProfile(null); setViewerLoading(false); }
+          return;
+        }
+        const { data } = await supabase
+          .from('profiles')
+          .select('id, handle, is_tester, feature_flags')
+          .eq('auth_user_id', user.id)
+          .single();
+        if (!cancelled) {
+          setViewerProfile(data || null);
+          setViewerLoading(false);
+        }
+      } catch {
+        if (!cancelled) { setViewerProfile(null); setViewerLoading(false); }
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   // Local earnings config defaults (mock data)
   const [itemLicensable] = useState({ 2: true, 3: true, 11: true });
@@ -797,6 +827,35 @@ export function VisitorRecDetail({ slug }) {
   const c = CAT[selectedItem.category] || CAT.other;
   const itemSlug = selectedItem.slug || selectedItem.title.toLowerCase().replace(/[^a-z0-9]+/g, "-");
   const url = `https://curators.ai/${profile.handle.replace("@", "")}/${itemSlug}`;
+
+  const isViewerOwner = viewerProfile?.id === profile?.id;
+  const canShowValidate = !viewerLoading && !isViewerOwner;
+
+  const handleValidateTap = async () => {
+    if (!viewerProfile) {
+      const redirect = encodeURIComponent(typeof window !== 'undefined' ? window.location.pathname : '/');
+      window.location.href = `/login?redirect=${redirect}`;
+      return;
+    }
+    const isViewerTester = viewerProfile.is_tester === true;
+    const flagOn = (viewerProfile.feature_flags || {}).payout_validation === true;
+    if (!isViewerTester || !flagOn) {
+      alert('Validation is in private testing.');
+      return;
+    }
+    const { data: sub } = await supabase
+      .from('subscriptions')
+      .select('id')
+      .eq('subscriber_id', viewerProfile.id)
+      .eq('curator_id', profile.id)
+      .is('unsubscribed_at', null)
+      .maybeSingle();
+    if (!sub) {
+      alert(`Subscribe to @${profile.handle.replace('@', '')} to validate this rec.`);
+      return;
+    }
+    setShowValidationSheet(true);
+  };
   const bndls = itemBundlesMap[selectedItem.id] || [];
   const recBundles = bundles.filter(b => bndls.includes(b.id));
   const fmtPhone = (p) => p ? p.replace(/^\+1(\d{3})(\d{3})(\d{4})$/, "($1) $2-$3") : "";
@@ -859,6 +918,19 @@ export function VisitorRecDetail({ slug }) {
               <Linkify text={selectedItem.context} style={{ fontSize: 17, fontFamily: F }} />
             </p>
           </div>
+
+          {canShowValidate && (
+            <button
+              onClick={handleValidateTap}
+              style={{
+                width: '100%', padding: '12px 14px', marginBottom: 20,
+                background: 'transparent', color: T.ink2,
+                border: '1px solid ' + T.bdr, borderRadius: 12,
+                fontFamily: F, fontSize: 14, fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >Validate this Rec</button>
+          )}
 
           <MediaEmbed
             extractor={selectedItem.extraction?.extractor}
@@ -1068,6 +1140,13 @@ export function VisitorRecDetail({ slug }) {
         </div>
       </div>
       </div>
+      {showValidationSheet && viewerProfile && (
+        <ValidationSheet
+          rec={selectedItem}
+          curator={profile}
+          onClose={() => setShowValidationSheet(false)}
+        />
+      )}
     </div>
   );
 }
@@ -1075,9 +1154,10 @@ export function VisitorRecDetail({ slug }) {
 /* ── Network/Saved Rec Detail (viewing another curator's rec) ── */
 export function NetworkRecDetail({ slug }) {
   const router = useRouter();
-  const { profileId, savedRecIds, saveRec, unsaveRec, mySubscriptionIds, subscribe } = useCurator();
+  const { profile, profileId, savedRecIds, saveRec, unsaveRec, mySubscriptionIds, subscribe } = useCurator();
   const [rec, setRec] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showValidationSheet, setShowValidationSheet] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -1170,6 +1250,12 @@ export function NetworkRecDetail({ slug }) {
   const isSubscribed = curator.id ? mySubscriptionIds.has(curator.id) : false;
   const item = { ...rec, date: rec.created_at?.split("T")[0] };
 
+  const canShowValidate =
+    profile?.isTester === true &&
+    hasFeature(profile, 'payout_validation') &&
+    curator?.id !== profileId &&
+    isSubscribed;
+
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minHeight: 0 }}>
       <div style={{ maxWidth: 700, margin: "0 auto", width: "100%", display: "flex", flexDirection: "column", flex: 1, overflow: "hidden", minHeight: 0 }}>
@@ -1254,6 +1340,19 @@ export function NetworkRecDetail({ slug }) {
               </div>
             )}
 
+            {canShowValidate && (
+              <button
+                onClick={() => setShowValidationSheet(true)}
+                style={{
+                  width: '100%', padding: '12px 14px', marginBottom: 20,
+                  background: 'transparent', color: T.ink2,
+                  border: '1px solid ' + T.bdr, borderRadius: 12,
+                  fontFamily: F, fontSize: 14, fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >Validate this Rec</button>
+            )}
+
             <MediaEmbed
               extractor={rec.extraction?.extractor}
               sourceUrl={rec.links?.[0]?.url || rec.source_block?.url}
@@ -1281,6 +1380,14 @@ export function NetworkRecDetail({ slug }) {
           </div>
         </div>
       </div>
+      {showValidationSheet && (
+        <ValidationSheet
+          rec={rec}
+          curator={curator}
+          onClose={() => setShowValidationSheet(false)}
+          onSuccess={() => { /* future: refresh validation state */ }}
+        />
+      )}
     </div>
   );
 }
