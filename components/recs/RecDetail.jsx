@@ -803,6 +803,9 @@ export function VisitorRecDetail({ slug }) {
   const [showValidationSheet, setShowValidationSheet] = useState(false);
   const [viewerProfile, setViewerProfile] = useState(null);
   const [viewerLoading, setViewerLoading] = useState(true);
+  const [existingValidation, setExistingValidation] = useState(null);
+  const [validationFetched, setValidationFetched] = useState(false);
+  const [showValidatedModal, setShowValidatedModal] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -833,6 +836,39 @@ export function VisitorRecDetail({ slug }) {
     }, 300);
     return () => { cancelled = true; clearTimeout(timer); };
   }, []);
+
+  useEffect(() => {
+    if (!viewerProfile?.id || !selectedItem?.id) {
+      setValidationFetched(true);
+      return;
+    }
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      try {
+        const { data, error } = await supabase
+          .from('validations')
+          .select('id, verbatim_text, created_at, retracted_at')
+          .eq('subscriber_id', viewerProfile.id)
+          .eq('rec_id', selectedItem.id)
+          .is('retracted_at', null)
+          .maybeSingle();
+        if (cancelled) return;
+        if (error) {
+          console.error('[VALIDATION_VISITOR_FETCH_ERROR]', error.message);
+          setExistingValidation(null);
+        } else {
+          setExistingValidation(data || null);
+        }
+        setValidationFetched(true);
+      } catch (e) {
+        if (!cancelled) {
+          console.error('[VALIDATION_VISITOR_FETCH_ERROR]', e?.message);
+          setValidationFetched(true);
+        }
+      }
+    }, 250);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [viewerProfile?.id, selectedItem?.id]);
 
   // Local earnings config defaults (mock data)
   const [itemLicensable] = useState({ 2: true, 3: true, 11: true });
@@ -981,7 +1017,7 @@ export function VisitorRecDetail({ slug }) {
             </p>
           </div>
 
-          {canShowValidate && (
+          {canShowValidate && validationFetched && !existingValidation && (
             <button
               onClick={handleValidateTap}
               style={{
@@ -992,6 +1028,19 @@ export function VisitorRecDetail({ slug }) {
                 cursor: 'pointer',
               }}
             >Validate this Rec</button>
+          )}
+
+          {canShowValidate && validationFetched && existingValidation && (
+            <button
+              onClick={() => setShowValidatedModal(true)}
+              style={{
+                width: '100%', padding: '12px 14px', marginBottom: 20,
+                background: 'transparent', color: T.ink3,
+                border: '1px solid ' + T.bdr, borderRadius: 12,
+                fontFamily: F, fontSize: 14, fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >Validated · {formatValidatedAt(existingValidation.created_at)}</button>
           )}
 
           <MediaEmbed
@@ -1207,7 +1256,54 @@ export function VisitorRecDetail({ slug }) {
           rec={selectedItem}
           curator={profile}
           onClose={() => setShowValidationSheet(false)}
+          onSuccess={(data) => {
+            setExistingValidation({
+              id: data?.validation_id,
+              verbatim_text: data?.verbatim_text || '',
+              created_at: new Date().toISOString(),
+              retracted_at: null,
+            });
+          }}
         />
+      )}
+      {showValidatedModal && (
+        <div
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 999 }}
+          onClick={() => setShowValidatedModal(false)}
+        />
+      )}
+      {showValidatedModal && (
+        <div style={{
+          position: 'fixed', top: '50%', left: '50%',
+          transform: 'translate(-50%, -50%)',
+          width: 360, maxWidth: '92vw',
+          background: T.bg, borderRadius: 14,
+          border: '1px solid ' + T.bdr,
+          boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+          padding: '20px 22px', zIndex: 1000, fontFamily: F,
+        }}>
+          <div style={{ fontSize: 11, color: T.ink3, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 8, fontWeight: 700 }}>
+            Your validation
+          </div>
+          <div style={{
+            fontSize: 14, color: T.ink, marginBottom: 14, lineHeight: 1.5,
+            padding: '10px 12px', background: T.s, border: '1px solid ' + T.bdr,
+            borderRadius: 8, whiteSpace: 'pre-wrap',
+          }}>
+            {existingValidation?.verbatim_text || '(no text available)'}
+          </div>
+          <div style={{ fontSize: 12, color: T.ink3, marginBottom: 14 }}>
+            Sent {formatValidatedAt(existingValidation?.created_at)}. Messages thread coming soon.
+          </div>
+          <button
+            onClick={() => setShowValidatedModal(false)}
+            style={{
+              width: '100%', padding: '10px', fontFamily: F, fontSize: 14, fontWeight: 600,
+              background: T.acc, color: T.accText,
+              border: 'none', borderRadius: 10, cursor: 'pointer',
+            }}
+          >Close</button>
+        </div>
       )}
     </div>
   );
@@ -1298,7 +1394,7 @@ export function NetworkRecDetail({ slug }) {
       try {
         const { data, error } = await supabase
           .from('validations')
-          .select('id, created_at, retracted_at')
+          .select('id, verbatim_text, created_at, retracted_at')
           .eq('subscriber_id', profileId)
           .eq('rec_id', rec.id)
           .is('retracted_at', null)
@@ -1496,6 +1592,7 @@ export function NetworkRecDetail({ slug }) {
           onSuccess={(data) => {
             setExistingValidation({
               id: data?.validation_id,
+              verbatim_text: data?.verbatim_text || '',
               created_at: new Date().toISOString(),
               retracted_at: null,
             });
@@ -1518,8 +1615,18 @@ export function NetworkRecDetail({ slug }) {
           boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
           padding: '20px 22px', zIndex: 1000, fontFamily: F,
         }}>
-          <div style={{ fontSize: 15, color: T.ink, marginBottom: 16, lineHeight: 1.5 }}>
-            Your note will be available in Messages soon.
+          <div style={{ fontSize: 11, color: T.ink3, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 8, fontWeight: 700 }}>
+            Your validation
+          </div>
+          <div style={{
+            fontSize: 14, color: T.ink, marginBottom: 14, lineHeight: 1.5,
+            padding: '10px 12px', background: T.s, border: '1px solid ' + T.bdr,
+            borderRadius: 8, whiteSpace: 'pre-wrap',
+          }}>
+            {existingValidation?.verbatim_text || '(no text available)'}
+          </div>
+          <div style={{ fontSize: 12, color: T.ink3, marginBottom: 14 }}>
+            Sent {formatValidatedAt(existingValidation?.created_at)}. Messages thread coming soon.
           </div>
           <button
             onClick={() => setShowValidatedModal(false)}

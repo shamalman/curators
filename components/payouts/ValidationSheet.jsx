@@ -53,7 +53,7 @@ export default function ValidationSheet({ rec, curator, onClose, onSuccess }) {
       }
       const data = await res.json();
       setDone(true);
-      if (onSuccess) onSuccess(data);
+      if (onSuccess) onSuccess({ ...data, verbatim_text: text.trim() });
       setTimeout(() => onClose(), 1200);
     } catch (e) {
       setError(e.message || 'Send failed. Try again.');
@@ -109,18 +109,6 @@ export default function ValidationSheet({ rec, curator, onClose, onSuccess }) {
         </div>
 
         <div style={{ padding: '16px 22px', overflowY: 'auto', flex: 1 }}>
-          <div style={{
-            padding: '12px 14px', background: T.s, borderRadius: 10,
-            border: '1px solid ' + T.bdr, marginBottom: 16,
-          }}>
-            <div style={{ fontSize: 11, color: T.ink3, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 4, fontWeight: 700 }}>
-              Rec by {curatorHandle}
-            </div>
-            <div style={{ fontSize: 14, color: T.ink, fontWeight: 500 }}>
-              {rec?.title || 'Recommendation'}
-            </div>
-          </div>
-
           <textarea
             ref={textareaRef}
             value={text}
