@@ -877,8 +877,16 @@ export function VisitorRecDetail({ slug }) {
       return;
     }
 
+    // Resolve curator id from the rec itself (profile.id is not set on visitor profile object)
+    const curatorId = selectedItem?.profile_id;
+    if (!curatorId) {
+      console.error('[VALIDATION_VISITOR_NO_CURATOR_ID]', { selectedItem });
+      alert('Could not identify the curator for this rec. Reload the page and try again.');
+      return;
+    }
+
     // Own-rec carve-out
-    if (resolvedViewer.id === profile?.id) {
+    if (resolvedViewer.id === curatorId) {
       return;
     }
 
@@ -894,7 +902,7 @@ export function VisitorRecDetail({ slug }) {
       .from('subscriptions')
       .select('id')
       .eq('subscriber_id', resolvedViewer.id)
-      .eq('curator_id', profile.id)
+      .eq('curator_id', curatorId)
       .is('unsubscribed_at', null)
       .maybeSingle();
 
