@@ -852,28 +852,62 @@ export function VisitorRecDetail({ slug }) {
   const canShowValidate = !viewerLoading && !isViewerOwner;
 
   const handleValidateTap = async () => {
-    if (!viewerProfile) {
+    // Force-refresh auth state to ensure session is propagated to Supabase REST layer
+    const { data: { user: liveUser } } = await supabase.auth.getUser();
+
+    if (!liveUser) {
       const redirect = encodeURIComponent(typeof window !== 'undefined' ? window.location.pathname : '/');
       window.location.href = `/login?redirect=${redirect}`;
       return;
     }
-    const isViewerTester = viewerProfile.is_tester === true;
-    const flagOn = (viewerProfile.feature_flags || {}).payout_validation === true;
+
+    // Re-resolve viewer profile in case the deferred fetch hasn't completed
+    let resolvedViewer = viewerProfile;
+    if (!resolvedViewer) {
+      const { data } = await supabase
+        .from('profiles')
+        .select('id, handle, is_tester, feature_flags')
+        .eq('auth_user_id', liveUser.id)
+        .single();
+      resolvedViewer = data || null;
+    }
+
+    if (!resolvedViewer) {
+      alert('Could not load your profile. Reload the page and try again.');
+      return;
+    }
+
+    // Own-rec carve-out
+    if (resolvedViewer.id === profile?.id) {
+      return;
+    }
+
+    const isViewerTester = resolvedViewer.is_tester === true;
+    const flagOn = (resolvedViewer.feature_flags || {}).payout_validation === true;
     if (!isViewerTester || !flagOn) {
       alert('Validation is in private testing.');
       return;
     }
-    const { data: sub } = await supabase
+
+    // Subscription check using fresh auth context
+    const { data: sub, error: subErr } = await supabase
       .from('subscriptions')
       .select('id')
-      .eq('subscriber_id', viewerProfile.id)
+      .eq('subscriber_id', resolvedViewer.id)
       .eq('curator_id', profile.id)
       .is('unsubscribed_at', null)
       .maybeSingle();
+
+    if (subErr) {
+      console.error('[VALIDATION_VISITOR_SUB_CHECK_ERROR]', subErr.message);
+      alert('Could not check subscription. Reload the page and try again.');
+      return;
+    }
     if (!sub) {
       alert(`Subscribe to @${profile.handle.replace('@', '')} to validate this rec.`);
       return;
     }
+
     setShowValidationSheet(true);
   };
   const bndls = itemBundlesMap[selectedItem.id] || [];
