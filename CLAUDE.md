@@ -294,6 +294,22 @@ Roadmap and open tickets live in the Claude.ai project files (not in this repo).
 
 ---
 
+## Payouts System (in progress, staging-only)
+
+Phase 1 of the payouts system shipped 2026-05-08. Validation capture core lives behind feature flag `payout_validation` AND `is_tester=true`.
+
+Tables: `validations` (money-attached, one per subscriber+rec), `comments` (shared, includes validation-comments). RLS enabled with subscriber-write / curator-read split on validations; world-read on comments filtered by `deleted_at IS NULL AND hidden_by_curator_at IS NULL`.
+
+Endpoint: `POST /api/validations`. Atomic-ish dual-write: validations row first (source of truth), comment second if posted_publicly, taste_confirmations third (best-effort, type='validation_given'). Failures of writes 2 and 3 logged as `[VALIDATION_COMMENT_WRITE_FAILED]` and `[VALIDATION_RECORD_WRITE_FAILED]` but do not fail the request.
+
+UI: `components/payouts/ValidationSheet.jsx` (bottom-sheet pattern, copies FeedbackSheet structure). Validate button renders on NetworkRecDetail and VisitorRecDetail. Hidden on CuratorRecDetail (own rec).
+
+Feature flag helper: `hasFeature(profile, flagName)` in `lib/features.js`. Takes already-loaded profile, no DB roundtrip.
+
+Pending threads (do not implement here): threads/messages substrate, validation email to curator, allocation calculator, earnings surface, Messages segment in Subs, Allocation segment in Subs, Lens monthly prompt.
+
+---
+
 ## Documentation Hygiene
 
 This file is the operating manual, not the architecture spec. When adding content, ask:
