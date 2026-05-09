@@ -2,6 +2,8 @@ import { createClient } from "@supabase/supabase-js";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { hasFeature } from "@/lib/features";
+import { sendValidationReceivedEmail } from "@/lib/email/sendValidationReceivedEmail";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -163,10 +165,64 @@ export async function POST(request) {
       console.error("[VALIDATION_RECORD_WRITE_FAILED]", confErr.message);
     }
 
-    // 4. THREAD-INTEGRATION: Thread 2 will add thread_messages write here.
-    // Validation rows and comments work independently of threads for now.
-    if (sent_to_curator) {
-      console.log("[VALIDATION_THREAD_PENDING]", { validationId: validation.id, curatorId });
+    // 4. Thread message + email (best-effort, gated by feature flags).
+    if (sent_to_curator === true) {
+      // Subscriber's payout_threads flag gates the thread substrate write.
+      const { data: subForFlags } = await admin
+        .from("profiles")
+        .select("id, feature_flags")
+        .eq("id", subscriberProfile.id)
+        .single();
+
+      if (subForFlags && hasFeature(subForFlags, "payout_threads")) {
+        try {
+          // Find or create thread (atomic upsert on unique pair).
+          const { data: thread, error: threadErr } = await admin
+            .from("threads")
+            .upsert(
+              {
+                subscriber_id: subscriberProfile.id,
+                curator_id: curatorId,
+                last_message_at: new Date().toISOString(),
+              },
+              { onConflict: "subscriber_id,curator_id" }
+            )
+            .select("id")
+            .single();
+
+          if (threadErr || !thread) {
+            console.error("[VALIDATION_THREAD_WRITE_FAILED]", threadErr?.message || "no thread returned");
+          } else {
+            const { error: msgErr } = await admin
+              .from("thread_messages")
+              .insert({
+                thread_id: thread.id,
+                sender_id: subscriberProfile.id,
+                body: verbatim_text.trim(),
+                validation_id: validation.id,
+              });
+
+            if (msgErr) {
+              console.error("[VALIDATION_THREAD_WRITE_FAILED]", msgErr.message);
+            }
+          }
+        } catch (err) {
+          console.error("[VALIDATION_THREAD_WRITE_FAILED]", err?.message || err);
+        }
+      }
+
+      // Curator's payout_email flag is checked inside the helper.
+      try {
+        const emailResult = await sendValidationReceivedEmail({
+          validationId: validation.id,
+          supabaseAdmin: admin,
+        });
+        if (!emailResult.ok && !emailResult.skipped) {
+          console.error("[VALIDATION_EMAIL_FAILED]", emailResult.error, emailResult.detail);
+        }
+      } catch (err) {
+        console.error("[VALIDATION_EMAIL_FAILED]", err?.message || err);
+      }
     }
 
     console.log("[VALIDATION_CREATED]", {
