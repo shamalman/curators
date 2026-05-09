@@ -806,11 +806,13 @@ export function VisitorRecDetail({ slug }) {
 
   useEffect(() => {
     let cancelled = false;
-    (async () => {
+    const timer = setTimeout(async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser();
+        if (cancelled) return;
         if (!user) {
-          if (!cancelled) { setViewerProfile(null); setViewerLoading(false); }
+          setViewerProfile(null);
+          setViewerLoading(false);
           return;
         }
         const { data } = await supabase
@@ -823,10 +825,13 @@ export function VisitorRecDetail({ slug }) {
           setViewerLoading(false);
         }
       } catch {
-        if (!cancelled) { setViewerProfile(null); setViewerLoading(false); }
+        if (!cancelled) {
+          setViewerProfile(null);
+          setViewerLoading(false);
+        }
       }
-    })();
-    return () => { cancelled = true; };
+    }, 300);
+    return () => { cancelled = true; clearTimeout(timer); };
   }, []);
 
   // Local earnings config defaults (mock data)
@@ -1245,9 +1250,9 @@ export function NetworkRecDetail({ slug }) {
   }, [slug]);
 
   useEffect(() => {
-    if (!rec?.id || !profileId) return;
+    if (loading || !rec?.id || !profileId) return;
     let cancelled = false;
-    (async () => {
+    const timer = setTimeout(async () => {
       try {
         const { data, error } = await supabase
           .from('validations')
@@ -1270,9 +1275,9 @@ export function NetworkRecDetail({ slug }) {
           setValidationFetched(true);
         }
       }
-    })();
-    return () => { cancelled = true; };
-  }, [rec?.id, profileId]);
+    }, 200);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [loading, rec?.id, profileId]);
 
   if (loading) {
     return (
