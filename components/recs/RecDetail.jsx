@@ -130,6 +130,21 @@ const fmtDateFull = (d) => {
   return parsed.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 };
 
+function formatValidatedAt(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const now = new Date();
+  const diffMs = now - d;
+  const diffMin = Math.floor(diffMs / 60000);
+  if (diffMin < 1) return 'just now';
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHr = Math.floor(diffMin / 60);
+  if (diffHr < 24) return `${diffHr}h ago`;
+  const diffDay = Math.floor(diffHr / 24);
+  if (diffDay < 7) return `${diffDay}d ago`;
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
 /* ── Curator Item Detail ── */
 export function CuratorRecDetail({ slug }) {
   const router = useRouter();
@@ -1158,6 +1173,9 @@ export function NetworkRecDetail({ slug }) {
   const [rec, setRec] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showValidationSheet, setShowValidationSheet] = useState(false);
+  const [existingValidation, setExistingValidation] = useState(null); // { id, created_at } or null
+  const [validationFetched, setValidationFetched] = useState(false);
+  const [showValidatedModal, setShowValidatedModal] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -1225,6 +1243,36 @@ export function NetworkRecDetail({ slug }) {
     }
     load();
   }, [slug]);
+
+  useEffect(() => {
+    if (!rec?.id || !profileId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data, error } = await supabase
+          .from('validations')
+          .select('id, created_at, retracted_at')
+          .eq('subscriber_id', profileId)
+          .eq('rec_id', rec.id)
+          .is('retracted_at', null)
+          .maybeSingle();
+        if (cancelled) return;
+        if (error) {
+          console.error('[VALIDATION_FETCH_ERROR]', error.message);
+          setExistingValidation(null);
+        } else {
+          setExistingValidation(data || null);
+        }
+        setValidationFetched(true);
+      } catch (e) {
+        if (!cancelled) {
+          console.error('[VALIDATION_FETCH_ERROR]', e?.message);
+          setValidationFetched(true);
+        }
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [rec?.id, profileId]);
 
   if (loading) {
     return (
@@ -1340,7 +1388,7 @@ export function NetworkRecDetail({ slug }) {
               </div>
             )}
 
-            {canShowValidate && (
+            {canShowValidate && validationFetched && !existingValidation && (
               <button
                 onClick={() => setShowValidationSheet(true)}
                 style={{
@@ -1351,6 +1399,19 @@ export function NetworkRecDetail({ slug }) {
                   cursor: 'pointer',
                 }}
               >Validate this Rec</button>
+            )}
+
+            {canShowValidate && validationFetched && existingValidation && (
+              <button
+                onClick={() => setShowValidatedModal(true)}
+                style={{
+                  width: '100%', padding: '12px 14px', marginBottom: 20,
+                  background: 'transparent', color: T.ink3,
+                  border: '1px solid ' + T.bdr, borderRadius: 12,
+                  fontFamily: F, fontSize: 14, fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >Validated · {formatValidatedAt(existingValidation.created_at)}</button>
             )}
 
             <MediaEmbed
@@ -1385,8 +1446,43 @@ export function NetworkRecDetail({ slug }) {
           rec={rec}
           curator={curator}
           onClose={() => setShowValidationSheet(false)}
-          onSuccess={() => { /* future: refresh validation state */ }}
+          onSuccess={(data) => {
+            setExistingValidation({
+              id: data?.validation_id,
+              created_at: new Date().toISOString(),
+              retracted_at: null,
+            });
+          }}
         />
+      )}
+      {showValidatedModal && (
+        <div
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 999 }}
+          onClick={() => setShowValidatedModal(false)}
+        />
+      )}
+      {showValidatedModal && (
+        <div style={{
+          position: 'fixed', top: '50%', left: '50%',
+          transform: 'translate(-50%, -50%)',
+          width: 360, maxWidth: '92vw',
+          background: T.bg, borderRadius: 14,
+          border: '1px solid ' + T.bdr,
+          boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+          padding: '20px 22px', zIndex: 1000, fontFamily: F,
+        }}>
+          <div style={{ fontSize: 15, color: T.ink, marginBottom: 16, lineHeight: 1.5 }}>
+            Your note will be available in Messages soon.
+          </div>
+          <button
+            onClick={() => setShowValidatedModal(false)}
+            style={{
+              width: '100%', padding: '10px', fontFamily: F, fontSize: 14, fontWeight: 600,
+              background: T.acc, color: T.accText,
+              border: 'none', borderRadius: 10, cursor: 'pointer',
+            }}
+          >Close</button>
+        </div>
       )}
     </div>
   );
