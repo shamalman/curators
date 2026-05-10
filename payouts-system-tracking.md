@@ -73,3 +73,36 @@ Progress log for the staged payouts rollout. CLAUDE.md carries the canonical sho
 | Lens monthly prompt | Future | |
 | `VisitorContext` does not expose `feature_flags` | Thread 4 (if needed) | If any visitor-side UI gates on a flag, `context/VisitorContext.jsx` must be extended. `CuratorContext` already maps `feature_flags → featureFlags`. |
 | Migration naming inconsistency | Backlog | `migrations/` mixes `NNN_…` and `YYYYMMDD_…` schemes. Lex order interleaves them. Not a Phase 2 blocker. |
+
+---
+
+## Open follow-ups
+
+### Per-notification-type unsubscribe (deferred to dedicated thread)
+
+Status: NOT STARTED. Tracked for a future thread, not blocked on Thread 4.
+
+Today, the validation email footer has a "Manage notifications" link that points to /api/email-action with action=unsubscribe and metadata { type: 'validation_received_email' }. The endpoint exists but does not write granular preferences yet. Footer link is currently a soft 404 for testers. Acceptable in alpha; not acceptable post-launch.
+
+When this thread happens:
+
+1. Add notification_prefs jsonb column to profiles. Default {} (treated as all-enabled by helper logic). Shape:
+
+   {
+     "validation_received_email": true,
+     "new_subscriber_email": true,
+     "new_rec_email": true,
+     "weekly_digest_email": true
+   }
+
+2. Update each email helper to check the relevant key. If notification_prefs.<key> === false, return { ok: true, skipped: 'pref_disabled' }. Feature flag check stays — both gates apply.
+
+3. Update /api/email-action endpoint to honor action=unsubscribe&type=<email_type> by writing notification_prefs[type] = false via service-role client.
+
+4. Add /settings/notifications page UI with a toggle per email type. Reads from notification_prefs, writes via authenticated PATCH.
+
+5. Treat missing keys as true in helper checks — no migration backfill needed for existing profiles.
+
+Why deferred: Thread 2's helper already gates on payout_email feature flag, so testers can be silenced via flag flip if needed. Per-type granularity is a public-launch requirement, not an alpha requirement. Keeping Thread 4 focused on Messages segment + reply UI.
+
+Touchpoints when work begins: lib/email/sendValidationReceivedEmail.js, lib/email/sendNewSubscriberEmail.js, app/api/email-action/route.js, new app/settings/notifications/page.jsx, profiles migration.
