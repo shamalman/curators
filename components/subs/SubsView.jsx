@@ -1,15 +1,33 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import { T, F, S } from "@/lib/constants"
 import { useCurator } from "@/context/CuratorContext"
+import { hasFeature } from "@/lib/features"
+import MessagesList from "@/components/messages/MessagesList"
+import ThreadDetail from "@/components/messages/ThreadDetail"
 
 export default function SubsView() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { profileId, profile, mySubscriptions, mySubscribers, refreshSubscriptions } = useCurator()
-  const [tab, setTab] = useState("subscriptions")
+
+  const segment = searchParams.get("segment") || "subscriptions"
+  const threadParam = searchParams.get("thread")
+  const tab = segment
+  const setTab = (next) => {
+    if (next === "messages") {
+      router.push("/subs?segment=messages")
+    } else if (next === "subscribers") {
+      router.push("/subs?segment=subscribers")
+    } else {
+      router.push("/subs")
+    }
+  }
+
+  const showMessagesTab = profile?.isTester === true && hasFeature(profile, "payout_messages_ui")
 
   // Email subscribers (legacy)
   const [emailSubs, setEmailSubs] = useState([])
@@ -67,18 +85,18 @@ export default function SubsView() {
 
         {/* Header */}
         <div style={{ padding: "52px 20px 0", flexShrink: 0 }}>
-          <h2 style={{ fontFamily: S, fontSize: 28, color: T.ink, fontWeight: 400, marginBottom: 16 }}>Subscriptions</h2>
+          <h2 style={{ fontFamily: S, fontSize: 28, color: T.ink, fontWeight: 400, marginBottom: 16 }}>{tab === "messages" ? "Messages" : tab === "subscribers" ? "Subscribers" : "Subscriptions"}</h2>
 
           {/* Segmented control */}
           <div style={{ display: "flex", gap: 2, background: T.s, borderRadius: 8, padding: 2, marginBottom: 16 }}>
-            {["subscriptions", "subscribers"].map(t => (
+            {(showMessagesTab ? ["subscriptions", "subscribers", "messages"] : ["subscriptions", "subscribers"]).map(t => (
               <button key={t} onClick={() => setTab(t)} style={{
                 flex: 1, padding: "7px 10px", borderRadius: 6, border: "none", cursor: "pointer",
                 background: tab === t ? T.s2 : "transparent",
                 color: tab === t ? T.ink : T.ink3,
                 fontSize: 12, fontWeight: 600, fontFamily: F,
                 transition: "background .15s, color .15s",
-              }}>{t === "subscriptions" ? "Subscriptions" : "Subscribers"}</button>
+              }}>{t === "subscriptions" ? "Subscriptions" : t === "subscribers" ? "Subscribers" : "Messages"}</button>
             ))}
           </div>
         </div>
@@ -256,6 +274,22 @@ export default function SubsView() {
                 </div>
               )}
             </>
+          )}
+
+          {/* === Messages tab === */}
+          {tab === "messages" && showMessagesTab && (
+            threadParam ? (
+              <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", marginTop: -8 }}>
+                <ThreadDetail
+                  threadId={threadParam}
+                  onBack={() => router.push("/subs?segment=messages")}
+                />
+              </div>
+            ) : (
+              <MessagesList
+                onOpenThread={(id) => router.push(`/subs?segment=messages&thread=${id}`)}
+              />
+            )
           )}
 
           <div style={{ height: 40 }} />

@@ -806,6 +806,9 @@ export function VisitorRecDetail({ slug }) {
   const [existingValidation, setExistingValidation] = useState(null);
   const [validationFetched, setValidationFetched] = useState(false);
   const [showValidatedModal, setShowValidatedModal] = useState(false);
+  const [existingThreadId, setExistingThreadId] = useState(null);
+  const [showRetractConfirm, setShowRetractConfirm] = useState(false);
+  const [retracting, setRetracting] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -850,7 +853,6 @@ export function VisitorRecDetail({ slug }) {
           .select('id, verbatim_text, created_at, retracted_at')
           .eq('subscriber_id', viewerProfile.id)
           .eq('rec_id', selectedItem.id)
-          .is('retracted_at', null)
           .maybeSingle();
         if (cancelled) return;
         if (error) {
@@ -858,6 +860,14 @@ export function VisitorRecDetail({ slug }) {
           setExistingValidation(null);
         } else {
           setExistingValidation(data || null);
+          if (data && selectedItem?.profile_id) {
+            const { data: threadRow } = await supabase
+              .from('threads')
+              .select('id')
+              .or(`and(subscriber_id.eq.${viewerProfile.id},curator_id.eq.${selectedItem.profile_id}),and(curator_id.eq.${viewerProfile.id},subscriber_id.eq.${selectedItem.profile_id})`)
+              .maybeSingle();
+            if (!cancelled && threadRow) setExistingThreadId(threadRow.id);
+          }
         }
         setValidationFetched(true);
       } catch (e) {
@@ -869,6 +879,27 @@ export function VisitorRecDetail({ slug }) {
     }, 250);
     return () => { cancelled = true; clearTimeout(timer); };
   }, [viewerProfile?.id, selectedItem?.id]);
+
+  async function handleVisitorRetract() {
+    if (!existingValidation?.id || retracting) return;
+    setRetracting(true);
+    try {
+      const res = await fetch(`/api/validations/${existingValidation.id}/retract`, {
+        method: "POST",
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setExistingValidation((prev) => prev ? { ...prev, retracted_at: data.retracted_at } : prev);
+        setShowRetractConfirm(false);
+      } else {
+        console.error("[VALIDATION_RETRACT_FAILED]", data);
+      }
+    } catch (e) {
+      console.error("[VALIDATION_RETRACT_ERROR]", e);
+    } finally {
+      setRetracting(false);
+    }
+  }
 
   // Local earnings config defaults (mock data)
   const [itemLicensable] = useState({ 2: true, 3: true, 11: true });
@@ -1292,9 +1323,32 @@ export function VisitorRecDetail({ slug }) {
           }}>
             {existingValidation?.verbatim_text || '(no text available)'}
           </div>
-          <div style={{ fontSize: 12, color: T.ink3, marginBottom: 14 }}>
-            Sent {formatValidatedAt(existingValidation?.created_at)}. Messages thread coming soon.
+          <div style={{ fontSize: 12, color: T.ink3, marginBottom: 12, fontFamily: F }}>
+            {existingValidation?.retracted_at
+              ? `Retracted ${formatValidatedAt(existingValidation.retracted_at)}.`
+              : `Sent ${formatValidatedAt(existingValidation?.created_at)}.`}
           </div>
+          {existingThreadId && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 14 }}>
+              <a
+                href={`/subs?segment=messages&thread=${existingThreadId}`}
+                style={{ fontFamily: F, fontSize: 13, color: T.acc, textDecoration: "none", fontWeight: 600 }}
+              >
+                Open thread →
+              </a>
+              {!existingValidation?.retracted_at && (
+                <button
+                  onClick={() => setShowRetractConfirm(true)}
+                  style={{
+                    background: "transparent", border: "none", padding: 0, cursor: "pointer",
+                    fontFamily: F, fontSize: 12, color: T.ink2, textAlign: "left",
+                  }}
+                >
+                  Retract validation
+                </button>
+              )}
+            </div>
+          )}
           <button
             onClick={() => setShowValidatedModal(false)}
             style={{
@@ -1303,6 +1357,49 @@ export function VisitorRecDetail({ slug }) {
               border: 'none', borderRadius: 10, cursor: 'pointer',
             }}
           >Close</button>
+        </div>
+      )}
+      {showRetractConfirm && (
+        <div
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1001 }}
+          onClick={() => !retracting && setShowRetractConfirm(false)}
+        />
+      )}
+      {showRetractConfirm && (
+        <div style={{
+          position: 'fixed', top: '50%', left: '50%',
+          transform: 'translate(-50%, -50%)',
+          width: 340, maxWidth: '92vw',
+          background: T.bg, borderRadius: 14,
+          border: '1px solid ' + T.bdr,
+          boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+          padding: '20px 22px', zIndex: 1002, fontFamily: F,
+        }}>
+          <div style={{ fontSize: 15, fontWeight: 700, color: T.ink, marginBottom: 8 }}>
+            Retract this validation?
+          </div>
+          <div style={{ fontSize: 13, color: T.ink2, marginBottom: 16, lineHeight: 1.4 }}>
+            Your note stays in the thread but will be marked as retracted. Allocation for this rec is removed.
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button
+              onClick={() => setShowRetractConfirm(false)}
+              disabled={retracting}
+              style={{
+                flex: 1, padding: '10px', fontFamily: F, fontSize: 13, fontWeight: 600,
+                background: T.acc, color: T.accText, border: 'none', borderRadius: 10, cursor: 'pointer',
+              }}
+            >Cancel</button>
+            <button
+              onClick={handleVisitorRetract}
+              disabled={retracting}
+              style={{
+                flex: 1, padding: '10px', fontFamily: F, fontSize: 13, fontWeight: 600,
+                background: 'transparent', color: T.ink2, border: `1px solid ${T.bdr}`, borderRadius: 10,
+                cursor: retracting ? 'default' : 'pointer',
+              }}
+            >{retracting ? "Retracting..." : "Retract"}</button>
+          </div>
         </div>
       )}
     </div>
@@ -1319,6 +1416,30 @@ export function NetworkRecDetail({ slug }) {
   const [existingValidation, setExistingValidation] = useState(null); // { id, created_at } or null
   const [validationFetched, setValidationFetched] = useState(false);
   const [showValidatedModal, setShowValidatedModal] = useState(false);
+  const [existingThreadId, setExistingThreadId] = useState(null);
+  const [showRetractConfirm, setShowRetractConfirm] = useState(false);
+  const [retracting, setRetracting] = useState(false);
+
+  async function handleNetworkRetract() {
+    if (!existingValidation?.id || retracting) return;
+    setRetracting(true);
+    try {
+      const res = await fetch(`/api/validations/${existingValidation.id}/retract`, {
+        method: "POST",
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setExistingValidation((prev) => prev ? { ...prev, retracted_at: data.retracted_at } : prev);
+        setShowRetractConfirm(false);
+      } else {
+        console.error("[VALIDATION_RETRACT_FAILED]", data);
+      }
+    } catch (e) {
+      console.error("[VALIDATION_RETRACT_ERROR]", e);
+    } finally {
+      setRetracting(false);
+    }
+  }
 
   useEffect(() => {
     async function load() {
@@ -1397,7 +1518,6 @@ export function NetworkRecDetail({ slug }) {
           .select('id, verbatim_text, created_at, retracted_at')
           .eq('subscriber_id', profileId)
           .eq('rec_id', rec.id)
-          .is('retracted_at', null)
           .maybeSingle();
         if (cancelled) return;
         if (error) {
@@ -1405,6 +1525,14 @@ export function NetworkRecDetail({ slug }) {
           setExistingValidation(null);
         } else {
           setExistingValidation(data || null);
+          if (data && rec?.profile_id) {
+            const { data: threadRow } = await supabase
+              .from('threads')
+              .select('id')
+              .or(`and(subscriber_id.eq.${profileId},curator_id.eq.${rec.profile_id}),and(curator_id.eq.${profileId},subscriber_id.eq.${rec.profile_id})`)
+              .maybeSingle();
+            if (!cancelled && threadRow) setExistingThreadId(threadRow.id);
+          }
         }
         setValidationFetched(true);
       } catch (e) {
@@ -1625,9 +1753,32 @@ export function NetworkRecDetail({ slug }) {
           }}>
             {existingValidation?.verbatim_text || '(no text available)'}
           </div>
-          <div style={{ fontSize: 12, color: T.ink3, marginBottom: 14 }}>
-            Sent {formatValidatedAt(existingValidation?.created_at)}. Messages thread coming soon.
+          <div style={{ fontSize: 12, color: T.ink3, marginBottom: 12, fontFamily: F }}>
+            {existingValidation?.retracted_at
+              ? `Retracted ${formatValidatedAt(existingValidation.retracted_at)}.`
+              : `Sent ${formatValidatedAt(existingValidation?.created_at)}.`}
           </div>
+          {existingThreadId && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 14 }}>
+              <a
+                href={`/subs?segment=messages&thread=${existingThreadId}`}
+                style={{ fontFamily: F, fontSize: 13, color: T.acc, textDecoration: "none", fontWeight: 600 }}
+              >
+                Open thread →
+              </a>
+              {!existingValidation?.retracted_at && (
+                <button
+                  onClick={() => setShowRetractConfirm(true)}
+                  style={{
+                    background: "transparent", border: "none", padding: 0, cursor: "pointer",
+                    fontFamily: F, fontSize: 12, color: T.ink2, textAlign: "left",
+                  }}
+                >
+                  Retract validation
+                </button>
+              )}
+            </div>
+          )}
           <button
             onClick={() => setShowValidatedModal(false)}
             style={{
@@ -1636,6 +1787,49 @@ export function NetworkRecDetail({ slug }) {
               border: 'none', borderRadius: 10, cursor: 'pointer',
             }}
           >Close</button>
+        </div>
+      )}
+      {showRetractConfirm && (
+        <div
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1001 }}
+          onClick={() => !retracting && setShowRetractConfirm(false)}
+        />
+      )}
+      {showRetractConfirm && (
+        <div style={{
+          position: 'fixed', top: '50%', left: '50%',
+          transform: 'translate(-50%, -50%)',
+          width: 340, maxWidth: '92vw',
+          background: T.bg, borderRadius: 14,
+          border: '1px solid ' + T.bdr,
+          boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+          padding: '20px 22px', zIndex: 1002, fontFamily: F,
+        }}>
+          <div style={{ fontSize: 15, fontWeight: 700, color: T.ink, marginBottom: 8 }}>
+            Retract this validation?
+          </div>
+          <div style={{ fontSize: 13, color: T.ink2, marginBottom: 16, lineHeight: 1.4 }}>
+            Your note stays in the thread but will be marked as retracted. Allocation for this rec is removed.
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button
+              onClick={() => setShowRetractConfirm(false)}
+              disabled={retracting}
+              style={{
+                flex: 1, padding: '10px', fontFamily: F, fontSize: 13, fontWeight: 600,
+                background: T.acc, color: T.accText, border: 'none', borderRadius: 10, cursor: 'pointer',
+              }}
+            >Cancel</button>
+            <button
+              onClick={handleNetworkRetract}
+              disabled={retracting}
+              style={{
+                flex: 1, padding: '10px', fontFamily: F, fontSize: 13, fontWeight: 600,
+                background: 'transparent', color: T.ink2, border: `1px solid ${T.bdr}`, borderRadius: 10,
+                cursor: retracting ? 'default' : 'pointer',
+              }}
+            >{retracting ? "Retracting..." : "Retract"}</button>
+          </div>
         </div>
       )}
     </div>
