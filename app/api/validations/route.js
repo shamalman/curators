@@ -166,6 +166,7 @@ export async function POST(request) {
     }
 
     // 4. Thread message + email (best-effort, gated by feature flags).
+    let thread = null;
     if (sent_to_curator === true) {
       // Subscriber's payout_threads flag gates the thread substrate write.
       const { data: subForFlags } = await admin
@@ -177,7 +178,7 @@ export async function POST(request) {
       if (subForFlags && hasFeature(subForFlags, "payout_threads")) {
         try {
           // Find or create thread (atomic upsert on unique pair).
-          const { data: thread, error: threadErr } = await admin
+          const { data: threadData, error: threadErr } = await admin
             .from("threads")
             .upsert(
               {
@@ -190,9 +191,10 @@ export async function POST(request) {
             .select("id")
             .single();
 
-          if (threadErr || !thread) {
+          if (threadErr || !threadData) {
             console.error("[VALIDATION_THREAD_WRITE_FAILED]", threadErr?.message || "no thread returned");
           } else {
+            thread = threadData;
             const { error: msgErr } = await admin
               .from("thread_messages")
               .insert({
@@ -215,6 +217,7 @@ export async function POST(request) {
       try {
         const emailResult = await sendValidationReceivedEmail({
           validationId: validation.id,
+          threadId: thread?.id,
           supabaseAdmin: admin,
         });
         if (!emailResult.ok && !emailResult.skipped) {
@@ -236,6 +239,7 @@ export async function POST(request) {
     return NextResponse.json({
       validation_id: validation.id,
       comment_id: commentId,
+      thread_id: thread?.id || null,
     });
   } catch (err) {
     console.error("[VALIDATION_ROUTE_ERROR]", err?.message || err);
