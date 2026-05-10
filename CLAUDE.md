@@ -2,7 +2,7 @@
 
 Operating manual for Claude Code in this repo. Loaded every session, so it stays lean. Architecture details live in `docs/` — referenced inline below.
 
-Last reviewed: May 7, 2026.
+Last reviewed: May 9, 2026.
 
 ---
 
@@ -314,7 +314,16 @@ Phase 2 (Thread 2) shipped 2026-05-09. Threads/messages substrate live + validat
 - Endpoint: `POST /api/threads/[threadId]/messages`. Auth-gated (anon-key + cookies via `@supabase/ssr`), participant-checked, gated by sender's `payout_threads`. Body: `{ body }`. RLS double-enforces participant check.
 - Two new flags Shamal sets manually via SQL: `payout_threads` (subscriber-side, gates substrate writes + reply endpoint) and `payout_email` (curator-side, gates email send).
 
-Pending (Thread 4+): allocation calculator, earnings surface, Messages segment in Subs (currently Subs has only `subscriptions`/`subscribers` tabs and no query-param routing), Allocation segment in Subs, Lens monthly prompt, threads UPDATE RLS policy for `last_message_at` touch.
+Phase 3 (Thread 4) shipped 2026-05-09. Messages segment + retract flow + comment endpoints.
+
+- Messages segment in `/subs?segment=messages` gated on `isTester` AND `payout_messages_ui` flag. URL routing via `useSearchParams` (`segment` + `thread` query params). `components/messages/MessagesList.jsx` lists threads sorted by `last_message_at desc`; `components/messages/ThreadDetail.jsx` renders messages with day dividers, validation rec cards, retracted state, and reply input. Page wrapped in `Suspense` for `useSearchParams` build compat.
+- Validation retraction: `POST /api/validations/[id]/retract`. Source of truth is `validations.retracted_at`. Cascades: soft-delete linked comment (best-effort, logged `[VALIDATION_RETRACT_CASCADE_FAILED] comment_soft_delete`) and append `taste_confirmations` row with `type='validation_retracted'` (best-effort, same marker). Existing-validation fetches in RecDetail no longer filter `retracted_at IS NULL` so the muted state can render the retracted copy.
+- Comment endpoints: `PATCH /api/comments/[id]` (24h edit window, owner-only), `DELETE /api/comments/[id]` (soft-delete via `deleted_at`, owner-only), `POST/DELETE /api/comments/[id]/hide` (curator-only via service-role + rec ownership check, writes `hidden_by_curator_at`). Endpoints shipped; rec-detail three-dot menu UI deferred.
+- `threads` UPDATE RLS policy applied (`migrations/008_threads_update_policy.sql`) — participants can now touch `last_message_at` from the user-session route. `[THREAD_TOUCH_FAILED]` should no longer fire on normal sends.
+- Email reply CTA from `validationReceivedEmail` now points to `/subs?segment=messages&thread={id}` when threadId is available; falls back to `/<curatorHandle>/<recSlug>` if not. `/api/validations` returns `thread_id` in the response.
+- New flag Shamal sets manually: `payout_messages_ui` (curator-side, gates Messages segment in `/subs`).
+
+Pending (Thread 5+): allocation calculator, earnings surface, Allocation segment in Subs, Lens monthly prompt, read receipts / unread persistence (no `read_at` column yet), comment three-dot menu UI on rec detail, LockManager auth context fix, atomic dual-write Postgres function for validation flow.
 
 ---
 

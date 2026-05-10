@@ -106,3 +106,29 @@ When this thread happens:
 Why deferred: Thread 2's helper already gates on payout_email feature flag, so testers can be silenced via flag flip if needed. Per-type granularity is a public-launch requirement, not an alpha requirement. Keeping Thread 4 focused on Messages segment + reply UI.
 
 Touchpoints when work begins: lib/email/sendValidationReceivedEmail.js, lib/email/sendNewSubscriberEmail.js, app/api/email-action/route.js, new app/settings/notifications/page.jsx, profiles migration.
+
+## Thread 4 — Shipped
+
+Commits:
+- 9200379 — backend (retract endpoint, comment endpoints, threads UPDATE policy, email URL)
+- 8b5a848 — UI (Messages segment, MessagesList, ThreadDetail, RecDetail muted state with retract flow)
+- 2554a83 — Suspense wrapper for /subs page
+
+SQL applied manually:
+- threads UPDATE policy (migrations/008_threads_update_policy.sql)
+- payout_messages_ui flag set on @shamal, @chris, @testmctesty
+
+Decisions made:
+- Used profileId from useCurator() not profile.id (profile object has no id field)
+- Used shared lib/supabase.js client not per-component createBrowserClient
+- Two-step queries throughout (threads → profiles → messages, no joins)
+- Convention kept: viewer's messages right, other participant's left
+- Day dividers in thread detail (Today / Yesterday / weekday / dated)
+- Refetch after send vs optimistic — alpha volume fine
+- Retract button gated on existingThreadId being set (only sent_to_curator=true validations have a retract path in UI)
+
+Follow-ups for Thread 7:
+- Read receipts / unread persistence (no read_at column yet)
+- Comment three-dot menu UI on rec detail (endpoints shipped, UI deferred)
+- LockManager auth context fix
+- Atomic dual-write Postgres function for validation flow
