@@ -8,6 +8,7 @@ import { useCurator } from "@/context/CuratorContext"
 import { hasFeature } from "@/lib/features"
 import MessagesList from "@/components/messages/MessagesList"
 import ThreadDetail from "@/components/messages/ThreadDetail"
+import AllocationView from "@/components/payouts/AllocationView"
 
 export default function SubsView() {
   const router = useRouter()
@@ -22,12 +23,15 @@ export default function SubsView() {
       router.push("/subs?segment=messages")
     } else if (next === "subscribers") {
       router.push("/subs?segment=subscribers")
+    } else if (next === "allocation") {
+      router.push("/subs?segment=allocation")
     } else {
       router.push("/subs")
     }
   }
 
   const showMessagesTab = profile?.isTester === true && hasFeature(profile, "payout_messages_ui")
+  const showAllocationTab = profile?.isTester === true && hasFeature(profile, "payout_allocation_ui")
 
   // Email subscribers (legacy)
   const [emailSubs, setEmailSubs] = useState([])
@@ -85,18 +89,23 @@ export default function SubsView() {
 
         {/* Header */}
         <div style={{ padding: "52px 20px 0", flexShrink: 0 }}>
-          <h2 style={{ fontFamily: S, fontSize: 28, color: T.ink, fontWeight: 400, marginBottom: 16 }}>{tab === "messages" ? "Messages" : tab === "subscribers" ? "Subscribers" : "Subscriptions"}</h2>
+          <h2 style={{ fontFamily: S, fontSize: 28, color: T.ink, fontWeight: 400, marginBottom: 16 }}>{tab === "messages" ? "Messages" : tab === "subscribers" ? "Subscribers" : tab === "allocation" ? "Allocation" : "Subscriptions"}</h2>
 
           {/* Segmented control */}
           <div style={{ display: "flex", gap: 2, background: T.s, borderRadius: 8, padding: 2, marginBottom: 16 }}>
-            {(showMessagesTab ? ["subscriptions", "subscribers", "messages"] : ["subscriptions", "subscribers"]).map(t => (
+            {[
+              "subscriptions",
+              "subscribers",
+              ...(showMessagesTab ? ["messages"] : []),
+              ...(showAllocationTab ? ["allocation"] : []),
+            ].map(t => (
               <button key={t} onClick={() => setTab(t)} style={{
                 flex: 1, padding: "7px 10px", borderRadius: 6, border: "none", cursor: "pointer",
                 background: tab === t ? T.s2 : "transparent",
                 color: tab === t ? T.ink : T.ink3,
                 fontSize: 12, fontWeight: 600, fontFamily: F,
                 transition: "background .15s, color .15s",
-              }}>{t === "subscriptions" ? "Subscriptions" : t === "subscribers" ? "Subscribers" : "Messages"}</button>
+              }}>{t === "subscriptions" ? "Subscriptions" : t === "subscribers" ? "Subscribers" : t === "messages" ? "Messages" : "Allocation"}</button>
             ))}
           </div>
         </div>
@@ -290,6 +299,11 @@ export default function SubsView() {
                 onOpenThread={(id) => router.push(`/subs?segment=messages&thread=${id}`)}
               />
             )
+          )}
+
+          {/* === Allocation tab === */}
+          {tab === "allocation" && showAllocationTab && (
+            <AllocationView />
           )}
 
           <div style={{ height: 40 }} />
