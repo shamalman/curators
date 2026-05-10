@@ -203,13 +203,13 @@ export async function GET() {
   if (allCuratorIds.length > 0) {
     const { data: profs, error: pErr } = await admin
       .from("profiles")
-      .select("id, handle, avatar_url")
+      .select("id, handle")
       .in("id", allCuratorIds);
     if (pErr) {
       console.error("[ALLOCATION_PROFILES_ERROR]", pErr.message);
       return NextResponse.json({ error: "profiles_query_failed" }, { status: 500 });
     }
-    profileMap = new Map((profs || []).map(p => [p.id, p]));
+    profileMap = new Map((profs || []).map(p => [p.id, { handle: p.handle, avatar_url: null }]));
   }
 
   // Block A — Activity (distribute ACTIVITY_TOTAL across curators with signals by weight)
