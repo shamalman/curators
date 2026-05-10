@@ -323,7 +323,19 @@ Phase 3 (Thread 4) shipped 2026-05-09. Messages segment + retract flow + comment
 - Email reply CTA from `validationReceivedEmail` now points to `/subs?segment=messages&thread={id}` when threadId is available; falls back to `/<curatorHandle>/<recSlug>` if not. `/api/validations` returns `thread_id` in the response.
 - New flag Shamal sets manually: `payout_messages_ui` (curator-side, gates Messages segment in `/subs`).
 
-Pending (Thread 5+): allocation calculator, earnings surface, Allocation segment in Subs, Lens monthly prompt, read receipts / unread persistence (no `read_at` column yet), comment three-dot menu UI on rec detail, LockManager auth context fix, atomic dual-write Postgres function for validation flow.
+Phase 4 (Thread 5) shipped 2026-05-09. Allocation segment in Subs (view-only, mocked numbers).
+
+- Fourth segment in `/subs`, gated on `isTester` + `payout_allocation_ui` flag (server + client).
+- View-only, mocked numbers. `is_projected: true` on every dollar amount.
+- Endpoint: `GET /api/allocation/preview`. Auth-gated, server-side feature-gated via `isFeatureEnabled`.
+- Components: `components/payouts/AllocationView.jsx`, `components/payouts/AllocationHeroBar.jsx`.
+- Hero $10.50 = Activity $5.20 + Floor $1.30 + Unallocated $4.00. Mocked totals locked; Thread 3 replaces with real waterfall math.
+- Activity weights: validation=3, save=1. Last row absorbs rounding remainder. Floor splits evenly across active curators (recommended in last 30d).
+- Flag enabled on @shamal, @chris, @testmctesty.
+- Feature flag column on `profiles` is `feature_flags` (jsonb). Server reads via `lib/features.isFeatureEnabled`.
+- Avatars: `profiles` table has NO avatar column. Endpoint and UI fall back to initial-bubble component when `avatar_url` is null. Logged as a follow-up.
+
+Pending (Thread 6+): allocation calculator (real waterfall math), earnings surface, Lens monthly prompt, read receipts / unread persistence (no `read_at` column yet), comment three-dot menu UI on rec detail, LockManager auth context fix, atomic dual-write Postgres function for validation flow.
 
 ---
 

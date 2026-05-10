@@ -67,9 +67,9 @@ Progress log for the staged payouts rollout. CLAUDE.md carries the canonical sho
 |---|---|---|
 | Threads UPDATE RLS — `last_message_at` touch fails silently from user session in `POST /api/threads/[threadId]/messages` | Thread 4 | Either add a participant-scoped UPDATE policy that only allows `last_message_at` modification, or move the touch to service-role inside the route. |
 | Messages segment in Subs (and `useSearchParams` wiring) | Thread 4 | `SubsView.jsx` currently has only `subscriptions`/`subscribers` tabs and reads no query params. Email reply links land on the rec page until this ships. |
-| Allocation segment in Subs | Thread 5+ | |
-| Allocation calculator | Thread 5+ | |
-| Earnings surface | Thread 5+ | |
+| Allocation segment in Subs | Thread 5 | SHIPPED 2026-05-09. View-only, mocked. See Thread 5 section below. |
+| Allocation calculator (real waterfall math) | Thread 6+ | Replaces mocked totals/weights in `/api/allocation/preview`. |
+| Earnings surface | Thread 6+ | |
 | Lens monthly prompt | Future | |
 | `VisitorContext` does not expose `feature_flags` | Thread 4 (if needed) | If any visitor-side UI gates on a flag, `context/VisitorContext.jsx` must be extended. `CuratorContext` already maps `feature_flags → featureFlags`. |
 | Migration naming inconsistency | Backlog | `migrations/` mixes `NNN_…` and `YYYYMMDD_…` schemes. Lex order interleaves them. Not a Phase 2 blocker. |
@@ -132,3 +132,28 @@ Follow-ups for Thread 7:
 - Comment three-dot menu UI on rec detail (endpoints shipped, UI deferred)
 - LockManager auth context fix
 - Atomic dual-write Postgres function for validation flow
+
+## Thread 5 — Shipped
+
+Phase 4 — Allocation segment in Subs (view-only, mocked) shipped 2026-05-09.
+
+Final commits:
+- 8ca15c7 — endpoint (`app/api/allocation/preview/route.js`)
+- c9cc150 — UI wire-up (`AllocationView`, `AllocationHeroBar`, SubsView segment)
+- 8f4821b — avatar column fix (drop `avatar_url` from profiles SELECT; column does not exist)
+
+SQL applied manually:
+- `payout_allocation_ui` flag set on @shamal, @chris, @testmctesty (`profiles.feature_flags`)
+
+Decisions made:
+- Server-side feature-flag gating on `/api/allocation/preview` is the new convention starting Thread 5. Thread 4 endpoints (`/api/validations/[id]/retract`, `/api/comments/[id]`, etc.) are client-gated only. Flag as a Thread 7 hardening item if desired.
+- Dollar formatter and `daysRemainingInMonth` helpers defined inline in `AllocationView` / route module, not in `lib/format`. Extract when a third caller needs them.
+- Endpoint inlines `getSupabaseAdmin()` and `getServerSupabase(cookieStore)` factories per Thread 4 convention. No shared helper introduced.
+- Activity row sort by weight desc, with the last (smallest) row absorbing the cents rounding remainder so the sum exactly equals `ACTIVITY_TOTAL`.
+- Floor uses `Math.floor((FLOOR_TOTAL * 100) / N)` per active curator — the per-curator amount may understate the displayed floor total by a few cents at certain N. Acceptable while mocked; revisit when real math lands.
+- `is_projected: true` returned on every response so the alpha banner is decoupled from the page; flipping the projection state is a single boolean change.
+
+New follow-ups added by Thread 5:
+- **PROFILES-AVATAR-001 (P3)**: `profiles` table has no avatar column. Allocation rows render initial bubbles. Decide: add `avatar_url` column or pull from `auth.users` metadata. Affects any future surface that wants avatars in row contexts (Subscribers, Subscriptions, Allocation, ThreadDetail header, etc.).
+- **ALLOCATION-VIZ-001 (P3)**: when alpha exits and `is_projected: false`, decide whether to keep the alpha banner copy, replace it (e.g., "Live allocation for {month}"), or remove it. The boolean already flows through the response.
+- **ALLOCATION-RECON-001 (lessons learned)**: recon SQL did not dump full `profiles` schema — only the specific columns the Thread 5 spec mentioned. The avatar column gap was caught only at deploy time. Future recon prompts should always include a full `information_schema.columns` dump for any table the endpoint will SELECT from, not just the columns the spec calls out.
