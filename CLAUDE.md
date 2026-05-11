@@ -335,6 +335,8 @@ Phase 4 (Thread 5) shipped 2026-05-09. Allocation segment in Subs (view-only, mo
 - Feature flag column on `profiles` is `feature_flags` (jsonb). Server reads via `lib/features.isFeatureEnabled`.
 - Avatars: `profiles` table has NO avatar column. Endpoint and UI fall back to initial-bubble component when `avatar_url` is null. Logged as a follow-up.
 
+**Temporary reconciliation endpoint** (added during Thread 3, Step B): `GET /api/_verify/allocation?subscriber=<handle>` or `?earnings=<handle>`. Cookie-session auth + hard handle allowlist (shamal/chris/testmctesty). Bypasses `payout_real_math` and `payout_earnings_ui` flags so the calculator can be hand-math reconciled against production data without a local Node env. Calls `calculateMonthlyAllocation` / `calculateMonthlyEarnings` from `lib/allocation/`. **Delete in Thread 7 cleanup** along with the rest of the verification scaffolding.
+
 Pending (Thread 6+): allocation calculator (real waterfall math), earnings surface, Lens monthly prompt, read receipts / unread persistence (no `read_at` column yet), comment three-dot menu UI on rec detail, LockManager auth context fix, atomic dual-write Postgres function for validation flow.
 
 ---
