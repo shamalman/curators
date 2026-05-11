@@ -4,6 +4,8 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { hasFeature } from "@/lib/features";
 import { sendValidationReceivedEmail } from "@/lib/email/sendValidationReceivedEmail";
+import { calculateMonthlyEarnings } from "@/lib/allocation/calculate-earnings";
+import { startOfMonthISO, startOfNextMonthISO } from "@/lib/allocation/calculate";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -213,12 +215,29 @@ export async function POST(request) {
         }
       }
 
+      // Compute curator's current-month earnings (best-effort). A failure here
+      // must NOT block the email send or fail the validation request.
+      let curatorEarnings = null;
+      try {
+        const earningsNow = new Date();
+        const earningsResult = await calculateMonthlyEarnings({
+          curatorId,
+          monthStart: startOfMonthISO(earningsNow),
+          monthEnd: startOfNextMonthISO(earningsNow),
+          supabase: admin,
+        });
+        curatorEarnings = earningsResult?.hero?.total_earnings || null;
+      } catch (err) {
+        console.error("[VALIDATION_EARNINGS_LOOKUP_FAILED]", err?.message || err);
+      }
+
       // Curator's payout_email flag is checked inside the helper.
       try {
         const emailResult = await sendValidationReceivedEmail({
           validationId: validation.id,
           threadId: thread?.id,
           supabaseAdmin: admin,
+          curatorEarnings,
         });
         if (!emailResult.ok && !emailResult.skipped) {
           console.error("[VALIDATION_EMAIL_FAILED]", emailResult.error, emailResult.detail);

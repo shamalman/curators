@@ -3,6 +3,11 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { isFeatureEnabled } from "@/lib/features";
+import {
+  calculateMonthlyAllocation,
+  startOfMonthISO as calcStartOfMonth,
+  startOfNextMonthISO as calcStartOfNextMonth,
+} from "@/lib/allocation/calculate";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -97,10 +102,32 @@ export async function GET() {
     return NextResponse.json({ error: "profile_not_found" }, { status: 404 });
   }
 
-  // Feature flag gate (server-side)
+  // Feature flag gate (server-side). payout_allocation_ui is the ACCESS gate
+  // for this endpoint and is independent of payout_real_math (the calculator
+  // selector). Do not collapse them.
   const enabled = await isFeatureEnabled(admin, profile.id, "payout_allocation_ui");
   if (!enabled) {
     return NextResponse.json({ error: "not_enabled" }, { status: 403 });
+  }
+
+  // payout_real_math selects the real calculator vs the Thread 5 mock.
+  const realMath = await isFeatureEnabled(admin, profile.id, "payout_real_math");
+  if (realMath) {
+    const nowReal = new Date();
+    const monthStartReal = calcStartOfMonth(nowReal);
+    const monthEndReal = calcStartOfNextMonth(nowReal);
+    try {
+      const result = await calculateMonthlyAllocation({
+        subscriberId: profile.id,
+        monthStart: monthStartReal,
+        monthEnd: monthEndReal,
+        supabase: admin,
+      });
+      return NextResponse.json(result);
+    } catch (err) {
+      console.error("[ALLOCATION_CALC_ERROR]", err?.message || err);
+      return NextResponse.json({ error: "calc_failed", detail: err?.message || String(err) }, { status: 500 });
+    }
   }
 
   const now = new Date();
