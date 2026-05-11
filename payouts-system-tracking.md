@@ -157,3 +157,56 @@ New follow-ups added by Thread 5:
 - **PROFILES-AVATAR-001 (P3)**: `profiles` table has no avatar column. Allocation rows render initial bubbles. Decide: add `avatar_url` column or pull from `auth.users` metadata. Affects any future surface that wants avatars in row contexts (Subscribers, Subscriptions, Allocation, ThreadDetail header, etc.).
 - **ALLOCATION-VIZ-001 (P3)**: when alpha exits and `is_projected: false`, decide whether to keep the alpha banner copy, replace it (e.g., "Live allocation for {month}"), or remove it. The boolean already flows through the response.
 - **ALLOCATION-RECON-001 (lessons learned)**: recon SQL did not dump full `profiles` schema — only the specific columns the Thread 5 spec mentioned. The avatar column gap was caught only at deploy time. Future recon prompts should always include a full `information_schema.columns` dump for any table the endpoint will SELECT from, not just the columns the spec calls out.
+
+---
+
+## Thread 3 — Shipped
+
+Phase 5 — Real allocation math + curator earnings surface shipped 2026-05-11.
+
+Final commits (in execution order, all on `main`):
+- `3c02285` — Step B initial: pure-logic calculator + verify script. `lib/allocation/calculate.js`, `lib/allocation/calculate-earnings.js`, `scripts/verify-allocation.mjs`, `app/api/_verify/allocation/route.js`.
+- `8f2e8a8` — Step B fix: rename `_verify/` to `verify-thread3/` after the underscore-prefix routing gotcha (see decisions below).
+- `1f53a85` — Step C: dual-path `/api/allocation/preview`, new `/api/earnings/preview`, validation email earnings line wired through.
+- `34a1297` — Step D: `/me/earnings` page, `EarningsView`, `EarningsHero`, segmented control 4th option.
+- `c609395` — Step D reorder: Earnings tab moved to last position (My Recs · Record · Public Profile · Earnings) to preserve muscle memory for the first three options.
+
+SQL applied manually (in Step B and Step C):
+- `payout_real_math` set on @shamal, @chris, @testmctesty (`profiles.feature_flags`).
+- `payout_earnings_ui` set on @shamal, @chris, @testmctesty (`profiles.feature_flags`).
+
+Acceptance verification:
+- Step B math verified offline against the locked fixture and in production via `GET /api/verify-thread3/allocation?subscriber=<handle>` and `?earnings=<handle>`. All seven math criteria (1–7) reconciled exactly: @shamal hero `$10.50/$6.30/$4.20/$0.00`, @testmctesty full cascade to floor `$10.50`, @chris earnings includes @shamal at `$7.35` ($6.30 validation + $1.05 floor).
+- Step C endpoints verified by browser paste on @shamal: real math returns `is_projected: false`; mock path code-reviewed (byte-identical to Thread 5).
+- Step D UI verified by browser walkthrough on @shamal (segmented control, hero, sections).
+
+Decisions captured during the build:
+
+1. **Hundredths-of-cents fixed-point amendment.** Spec said "cents" but the cascade math required hundredths of cents (1 unit = $0.0001) to keep tier-base allocations as clean integers. 25% of $10.50 = 262.5 cents (fractional); 25% of 105000 units = 26250 units (integer). Internal currency = units; conversion to two-decimal dollar strings happens only at the response-serialization step. Floor and round-down within tier, with the remainder absorbed by the highest-count curator (alphabetical handle tiebreak for determinism).
+
+2. **Underscore-folder Next.js gotcha.** First Step B push placed the verification endpoint at `app/api/_verify/allocation/route.js`. Next.js app router treats `_`-prefixed directories as private folders and excludes them from routing — the route returned 404 indefinitely. Renamed to `verify-thread3/` in commit `8f2e8a8`. Captured in CLAUDE.md so future-me does not repeat it.
+
+3. **`scripts/verify-allocation.mjs` is `.mjs`, not `.js`.** Original handoff spelled it `.js` but the existing convention (`scripts/regenerate-taste-profile.mjs`) is `.mjs` because there is no `"type": "module"` in `package.json`. Using `.mjs` lets Node treat it as ESM without changing the whole codebase's module classification.
+
+4. **Per-rec activity attribution.** Spec did not strictly define how a curator's tier slice is broken down per rec for the Top Recs surface. Implemented: within each tier (validation, save), per-rec units = `floor(rec_count / curator_total_count * curator_slice_units)`; remainder absorbed by the highest-count rec (alphabetical `rec_id` tiebreak). Floor tier is NOT attributed per-rec (it is curator-level by design). This is best-effort accuracy; if launch-time accuracy demands a canonical attribution model, formalize it.
+
+5. **Signal summary "subscribed" for floor-only contributors.** When a contributing subscriber has zero validations and zero saves (pure floor-tier contribution), the FROM YOUR SUBSCRIBERS row shows `subscribed` rather than an empty line. Honest to the user's mental model; aligns with the "signal summary" required by the spec without inventing a more elaborate label.
+
+6. **`/me/earnings` direct-URL access pattern matches Thread 5.** No page-level flag check. The segmented control conditionally renders the option; the API returns 403 for non-flagged users; `EarningsView` shows "Earnings is not available on this account." for the 403 case and "Could not load earnings." for other errors. No new gating pattern introduced.
+
+7. **Email earnings line uses the email template's own `INK2` (`#6B6B66`).** Spec referenced `T.ink2` (`#A09888`, dark-theme secondary) but the email template is cream-on-cream. Same intent, correct visual context.
+
+8. **Email earnings line position.** Renders between the Reply CTA and `emailFooter` divider, never inside the legal footer. Plain-text body appends the same line on its own line. Gated on `parseFloat(curatorEarnings) > 0` so `null`, `undefined`, and `"0.00"` all suppress it.
+
+9. **`/api/allocation/preview` keeps two independent flags.** `payout_allocation_ui` is the access gate (403 if disabled). `payout_real_math` is the calculator selector inside the access-gated path. Spec explicitly forbade collapsing the two — separation lets the calculator be turned on or off without changing who sees the surface.
+
+10. **Hero math invariant enforced.** `hero.total === hero.activity + hero.floor + hero.unallocated` for every viewer. Verified against the locked fixtures and against live `@shamal` / `@testmctesty` data.
+
+Follow-ups for Thread 7 (cleanup):
+
+- **VERIFY-ENDPOINT-CLEANUP**: delete `app/api/verify-thread3/allocation/route.js` and remove the corresponding paragraph from CLAUDE.md.
+- **VERIFY-SCRIPT-CLEANUP**: decide whether to delete `scripts/verify-allocation.mjs` or retain it as a reconciliation tool. Default: delete with the endpoint, since the in-prod route covers the same workflow without needing a local Node env.
+- **PER-REC-ATTRIBUTION-001 (P3)**: per-rec attribution within tier slices is best-effort. If pre-launch we want a canonical model (e.g., revenue-weighted vs count-weighted), spec and reimplement in `calculateCuratorSliceFromSubscriber`.
+- **EARNINGS-ALPHA-BANNER-001 (P3)**: when alpha exits, decide the banner copy (likely "Live earnings for {month}" or removed). Currently always-on per Thread 3 spec, regardless of `is_projected`.
+- **ME-TASTE-NAMING-001 (recon surfaced)**: `/me/page.js` renders `TasteFileView` and `/me/taste/page.js` renders `TasteManager`, but CLAUDE.md describes both surfaces with overlapping language. Pre-existing tech debt, not Thread 3's bug; logged in case Thread 7 wants to consolidate the names.
+- **CLAUDE-MD-PRUNE-001 (recon surfaced)**: CLAUDE.md is 365 lines / ~29 KB, well past its 250-line / 20 KB soft target. The Payouts System section in particular has grown to hold five phases of detail that could move into `docs/payouts.md`. Prune in a dedicated pass.
