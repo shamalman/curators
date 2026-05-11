@@ -5,7 +5,11 @@ import MeSegmentedControl from '@/components/me/MeSegmentedControl'
 
 export default function MeLayout({ children }) {
   const pathname = usePathname()
-  const active = pathname === '/me' ? 'recs' : 'taste'
+  const active = pathname === '/me'
+    ? 'recs'
+    : pathname.startsWith('/me/earnings')
+      ? 'earnings'
+      : 'taste'
   const needsInternalScroll = pathname === '/me'
 
   return (
