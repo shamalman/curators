@@ -30,6 +30,16 @@ This file is the persistent layer for AI behavior work. Individual fixes happen 
 - **Fix direction:** Strengthen rec-capture.md skill to explicitly state that threshold evaluation is cumulative across the conversation, and that once a descriptor has been given (even in a prior message), no further clarifying questions are permitted.
 - **File:** lib/prompts/skills/rec-capture.md
 
+### AI-006 | P2 | Fictional entities accepted as real without verification
+
+- **Symptom:** When a curator names a band, album, place, or other entity that does not exist, Lens treats the name as real, accepts it for save, and produces a save card. No verification step. No admission of uncertainty.
+- **Example:** Observed twice on @testmctesty across two separate transcripts ("Queens of the Stoppage / Solidfy" and "The Catillions / Smokers"). Both fictional. Both captured without challenge.
+- **Root cause (hypothesis):** Lens has no entity verification path for unparsed text mentions. Save threshold rules in rec-capture.md treat WHAT as "a nameable thing" without any existence check. The Charter's "Honesty about what you read" rule is scoped to parsed links and images, not to text-only mentions of entities Lens has no source for.
+- **Open question before fix:** Does Lens have web search or any other verification capability at chat time? If yes, fix is to require a verification step before saving any band/artist/album/place that doesn't have a parseable URL attached. If no, fix is to require Lens to admit uncertainty in the reflection ("Smokers by The Catillions — I don't recognize that one, want to confirm the spelling or paste a link?").
+- **Fix direction:** TBD pending answer to the verification-capability question. Likely lives in rec-capture.md (additional rule in or near SAVE THRESHOLD) or charter.md (extension of "Honesty about what you read" to cover text-only entity mentions).
+- **File:** lib/prompts/skills/rec-capture.md, lib/prompts/skills/staging/charter.md
+- **Priority justification:** P2. Softer failure mode than capture-eagerness or interrogation. Makes Lens feel naive rather than pushy. Real failure but not blocking alpha.
+
 ---
 
 ## Stale code references
@@ -49,6 +59,52 @@ Not AI behavior bugs strictly — these are code references to DB tables or colu
 ---
 
 ## Resolved
+
+### [Resolved: 2026-05-10, commit `92ed0f4`] Lens pivots categories unprompted in Talk-through
+
+**Fix summary:** Added two enforcement points to lib/prompts/skills/staging/charter.md — appended category-coverage ban to Talk-through paragraph, new top-level section "Never pivot categories unprompted." Charter wins on conflict per its own framing.
+
+---
+
+**Observed:** May 9, 2026. Tester transcript on @ianr. After capturing a music save, Lens pivoted to "anywhere you've eaten lately that stuck" with no signal from the curator. Category coverage took priority over following the curator's named subject.
+
+**Root cause:** Talk-through branch in charter.md required "ask one genuine question that helps them articulate" but did not explicitly forbid changing categories. Legacy curators-ai-system-prompt.md framing around cross-category triangulation likely pulled against the Charter. Soft instruction lost to dense priors.
+
+**Priority:** P0 at observation. Tester-visible Charter violations affecting trust.
+
+---
+
+### [Resolved: 2026-05-10, commit `f634252`] Save threshold over-fires on experience mentions; descriptor extraction loops on behavioral signals
+
+**Fix summary:** Two edits to lib/prompts/skills/staging/rec-capture.md (staging only, stable lane untouched pending one-week tester verification). Added behavioral descriptors paragraph ("on repeat," "can't stop listening," "been wearing all week," etc. count as descriptors and trigger save offer same turn). Added "Experience mentions are not automatic rec triggers" section — past-tense experience verbs ("saw," "went to," "watched," "ate at") do not trigger save offers without explicit rec framing on top.
+
+---
+
+**Observed:** May 9, 2026. Staging verification of charter edit (92ed0f4) on @testmctesty. Lens offered to save "Saw Twisted Teens last night in Brooklyn" as a rec (experience-mention bug). Lens asked two descriptor-extraction questions after "on repeat" was already given (Pacquito-shape regression on behavioral signals).
+
+**Root cause:** SAVE THRESHOLD rule in rec-capture.md treated any nameable thing with affirmative framing as a save target, with no carve-out for past-tense experience verbs. Descriptor examples ("hard hitting rhythms," "synths are sick") did not include behavioral or usage signals, so the model classified "on repeat" as ambiguous and looped for clarification.
+
+**Verification:** four-for-four pass on @testmctesty (experience carve-out, behavioral descriptor, decline closes turn, hyphen ban).
+
+**Priority:** P0 at observation. Tester-visible Charter violations affecting trust.
+
+---
+
+### [Resolved: 2026-05-10, commit `d9e0e92`] Decline-pivot violation persists despite Item 6 ban; spaced hyphens substitute for banned em dashes
+
+**Fix summary:** Two edits to lib/prompts/skills/staging/charter.md. Personality Item 6 strengthened with worked example block (three Banned responses using actual transcript text, one Required response, closing rule that the follow-up question is the violation). "Never use em dashes" section renamed to "Never use em dashes or hyphens as connectors" with explicit bans on -, --, and other dash-shaped substitutes, plus three Banned/Required example pairs.
+
+---
+
+**Observed:** May 9, 2026. Staging verification of rec-capture edit (f634252) on @testmctesty. Decline "not yet" produced "Got it - holding off on that one for now. What else has been hitting lately?" — Item 6 violation. Same response also used spaced hyphen as em-dash substitute; another response used double hyphen --.
+
+**Root cause:** Item 6 rule was prose-only ("no follow-up question at all"), model parsed as soft preference. Em-dash ban targeted only the literal — character, leaving -, --, and spaced hyphens unguarded as common substitutes.
+
+**Verification:** four-for-four pass on @testmctesty post-deploy. Awaiting @shamal and @chris re-verification before mirror to stable.
+
+**Priority:** P0 at observation. Tester-visible Charter violations affecting trust.
+
+---
 
 ### [Resolved: 2026-04-10, no code commit needed] `unsupported_source_requests` table referenced in code but doesn't exist
 
