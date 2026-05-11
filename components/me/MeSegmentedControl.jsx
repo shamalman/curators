@@ -22,8 +22,8 @@ export default function MeSegmentedControl({ active }) {
   const options = [
     { id: 'recs', label: 'My Recs' },
     { id: 'taste', label: 'Record' },
-    ...(showEarnings ? [{ id: 'earnings', label: 'Earnings' }] : []),
     { id: 'profile', label: 'Public Profile' },
+    ...(showEarnings ? [{ id: 'earnings', label: 'Earnings' }] : []),
   ]
 
   return (
