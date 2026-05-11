@@ -30,16 +30,6 @@ This file is the persistent layer for AI behavior work. Individual fixes happen 
 - **Fix direction:** Strengthen rec-capture.md skill to explicitly state that threshold evaluation is cumulative across the conversation, and that once a descriptor has been given (even in a prior message), no further clarifying questions are permitted.
 - **File:** lib/prompts/skills/rec-capture.md
 
-### AI-006 | P2 | Fictional entities accepted as real without verification
-
-- **Symptom:** When a curator names a band, album, place, or other entity that does not exist, Lens treats the name as real, accepts it for save, and produces a save card. No verification step. No admission of uncertainty.
-- **Example:** Observed twice on @testmctesty across two separate transcripts ("Queens of the Stoppage / Solidfy" and "The Catillions / Smokers"). Both fictional. Both captured without challenge.
-- **Root cause (hypothesis):** Lens has no entity verification path for unparsed text mentions. Save threshold rules in rec-capture.md treat WHAT as "a nameable thing" without any existence check. The Charter's "Honesty about what you read" rule is scoped to parsed links and images, not to text-only mentions of entities Lens has no source for.
-- **Open question before fix:** Does Lens have web search or any other verification capability at chat time? If yes, fix is to require a verification step before saving any band/artist/album/place that doesn't have a parseable URL attached. If no, fix is to require Lens to admit uncertainty in the reflection ("Smokers by The Catillions — I don't recognize that one, want to confirm the spelling or paste a link?").
-- **Fix direction:** TBD pending answer to the verification-capability question. Likely lives in rec-capture.md (additional rule in or near SAVE THRESHOLD) or charter.md (extension of "Honesty about what you read" to cover text-only entity mentions).
-- **File:** lib/prompts/skills/rec-capture.md, lib/prompts/skills/staging/charter.md
-- **Priority justification:** P2. Softer failure mode than capture-eagerness or interrogation. Makes Lens feel naive rather than pushy. Real failure but not blocking alpha.
-
 ---
 
 ## Stale code references
@@ -59,6 +49,24 @@ Not AI behavior bugs strictly — these are code references to DB tables or colu
 ---
 
 ## Resolved
+
+### [Resolved: 2026-05-10, won't-fix] AI-006 | Fictional entities accepted as real without verification
+
+**Fix summary:** Closed as won't-fix after reconsideration. The "bug" assumed Lens should verify entity existence before accepting a save. In practice, curators routinely recommend things Lens has never heard of — niche bands, hyperlocal restaurants, indie zines, regional artists. A verification rule would force Lens to admit uncertainty on legitimate recs from knowledgeable curators, which biases the product toward mainstream entities and undermines curator-first design. The observed failure (Lens captured fake bands "Queens of the Stoppage" and "The Catillions" without challenge) only surfaced because a tester was deliberately fabricating names. In real usage, this behavior is correct.
+
+---
+
+**Observed:** May 9, 2026, during staging verification on @testmctesty. Two fabricated band names captured as real recs.
+
+**Reconsidered:** May 10, 2026. The framing of the original entry confused two distinct problem classes: (a) verifying entity existence, (b) detecting typos in known canonical entities. Class (a) is by-design behavior — curators are the experts on what exists, not Lens. Class (b) is a narrower potential future problem worth a separate entry if it ever surfaces from real (not adversarial) tester traffic.
+
+**Decision:** Won't-fix. Current behavior of accepting text-only entity mentions at face value is correct for a curator-first product. Recon on web search infrastructure (Anthropic native web_search_20250305 tool, dispatch loop generalization in app/api/chat/route.js) is preserved in case a related but narrower problem ever needs the same infrastructure.
+
+**If a future typo-detection bug emerges:** file as a new AI-XXX entry scoped to "high-confidence canonical entities with obvious misspellings" (e.g. "Tylor Swift," "The Beatels"). Do not reopen this entry; the original framing is the wrong problem.
+
+**Priority:** N/A — won't-fix.
+
+---
 
 ### [Resolved: 2026-05-10, commit `92ed0f4`] Lens pivots categories unprompted in Talk-through
 
