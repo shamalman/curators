@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { T, F, CAT, CATEGORIES } from "@/lib/constants";
 import { useCurator } from "@/context/CuratorContext";
 import { useLensInsights } from "@/hooks/useLensInsights";
+import Sheet from "@/components/ui/Sheet";
 
 const URL_REGEX = /^https?:\/\/[^\s]+$/i;
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
@@ -810,34 +811,6 @@ export default function QuickCaptureSheet({ isOpen, onClose, onSaved, defaultVis
 
   // ── Render ─────────────────────────────────────────────────────
 
-  const sheetStyle = isDesktop
-    ? {
-        position: "fixed",
-        top: "50%", left: "50%",
-        transform: "translate(-50%, -50%)",
-        width: "min(560px, 92vw)",
-        maxHeight: "88dvh",
-        background: T.s,
-        border: `1px solid ${T.bdr}`,
-        borderRadius: 16,
-        padding: 28,
-        overflowY: "auto",
-        zIndex: 101,
-        boxSizing: "border-box",
-      }
-    : {
-        position: "fixed",
-        left: 0, right: 0, bottom: 0,
-        background: T.s,
-        borderTop: `1px solid ${T.bdr}`,
-        borderRadius: "16px 16px 0 0",
-        padding: 20,
-        maxHeight: "92dvh",
-        overflowY: "auto",
-        zIndex: 101,
-        boxSizing: "border-box",
-      };
-
   const sectionLabel = (text, optional) => (
     <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 8 }}>
       <span style={{ fontSize: 11, fontWeight: 500, color: T.ink2, textTransform: "uppercase", letterSpacing: ".08em", fontFamily: F }}>
@@ -866,14 +839,13 @@ export default function QuickCaptureSheet({ isOpen, onClose, onSaved, defaultVis
   const firstLinkId = attachedLinks[0]?.id;
 
   return (
-    <>
-      <div
-        onClick={handleCancel}
-        style={{
-          position: "fixed", inset: 0, background: "rgba(0, 0, 0, 0.55)", zIndex: 100,
-        }}
-      />
-      <div style={sheetStyle}>
+    <Sheet
+      isOpen={isOpen}
+      onClose={handleCancel}
+      width={isDesktop ? 560 : 480}
+      bodyPadding={isDesktop ? "28px" : "20px"}
+      background={T.s}
+    >
         {/* Header */}
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, marginBottom: 20 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
@@ -1236,8 +1208,7 @@ export default function QuickCaptureSheet({ isOpen, onClose, onSaved, defaultVis
         >
           {saving ? "Saving..." : "Save recommendation"}
         </button>
-      </div>
       <style>{`@keyframes qcSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
-    </>
+    </Sheet>
   );
 }

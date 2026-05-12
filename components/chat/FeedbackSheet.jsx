@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { T, F } from "@/lib/constants";
+import Sheet from "@/components/ui/Sheet";
 
 export default function FeedbackSheet({ isOpen, onClose, profileId, handle, isDesktop }) {
   const [text, setText] = useState('');
@@ -132,49 +133,14 @@ export default function FeedbackSheet({ isOpen, onClose, profileId, handle, isDe
     }
   }
 
-  if (!isOpen) return null;
-
-  const sheetStyle = isDesktop ? {
-    position: 'fixed', top: '50%', left: '50%',
-    transform: 'translate(-50%, -50%)',
-    width: 480, maxHeight: '80vh',
-    background: T.bg2, borderRadius: 16,
-    padding: 24, zIndex: 1000,
-    boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
-    display: 'flex', flexDirection: 'column', gap: 16,
-    fontFamily: F,
-  } : {
-    position: 'fixed', bottom: 0, left: 0, right: 0,
-    background: T.bg2, borderRadius: '16px 16px 0 0',
-    padding: '20px 16px 32px',
-    zIndex: 1000,
-    display: 'flex', flexDirection: 'column', gap: 16,
-    fontFamily: F,
-    boxSizing: 'border-box',
-    width: '100%',
-    maxHeight: '92dvh',
-    overflowY: 'auto',
-  };
-
   return (
-    <>
-      <div
-        onClick={handleClose}
-        style={{
-          position: 'fixed', inset: 0,
-          background: 'rgba(0,0,0,0.5)',
-          zIndex: 999,
-        }}
-      />
-      <div style={sheetStyle}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ color: T.ink, fontSize: 15, fontWeight: 600 }}>Share feedback</span>
-          <button
-            onClick={handleClose}
-            style={{ background: 'none', border: 'none', color: T.ink3, cursor: 'pointer', fontSize: 20, padding: 0, fontFamily: F }}
-          >×</button>
-        </div>
-
+    <Sheet
+      isOpen={isOpen}
+      onClose={handleClose}
+      title="Share feedback"
+      bodyPadding={isDesktop ? "24px" : "20px 16px 32px"}
+    >
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         {done ? (
           <div style={{ color: T.acc, fontSize: 14, textAlign: 'center', padding: '16px 0' }}>
             Thanks — got it.
@@ -289,6 +255,6 @@ export default function FeedbackSheet({ isOpen, onClose, profileId, handle, isDe
           </>
         )}
       </div>
-    </>
+    </Sheet>
   );
 }
