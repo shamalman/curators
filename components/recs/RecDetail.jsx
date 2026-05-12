@@ -1336,18 +1336,19 @@ export function VisitorRecDetail({ slug }) {
               >
                 Open thread →
               </a>
-              {!existingValidation?.retracted_at && (
-                <button
-                  onClick={() => setShowRetractConfirm(true)}
-                  style={{
-                    background: "transparent", border: "none", padding: 0, cursor: "pointer",
-                    fontFamily: F, fontSize: 12, color: T.ink2, textAlign: "left",
-                  }}
-                >
-                  Retract validation
-                </button>
-              )}
             </div>
+          )}
+          {!existingValidation?.retracted_at && (
+            <button
+              onClick={() => setShowRetractConfirm(true)}
+              style={{
+                background: "transparent", border: "none", padding: 0, cursor: "pointer",
+                fontFamily: F, fontSize: 12, color: T.ink2, textAlign: "left",
+                marginBottom: 14,
+              }}
+            >
+              Retract validation
+            </button>
           )}
           <button
             onClick={() => setShowValidatedModal(false)}
@@ -1766,18 +1767,19 @@ export function NetworkRecDetail({ slug }) {
               >
                 Open thread →
               </a>
-              {!existingValidation?.retracted_at && (
-                <button
-                  onClick={() => setShowRetractConfirm(true)}
-                  style={{
-                    background: "transparent", border: "none", padding: 0, cursor: "pointer",
-                    fontFamily: F, fontSize: 12, color: T.ink2, textAlign: "left",
-                  }}
-                >
-                  Retract validation
-                </button>
-              )}
             </div>
+          )}
+          {!existingValidation?.retracted_at && (
+            <button
+              onClick={() => setShowRetractConfirm(true)}
+              style={{
+                background: "transparent", border: "none", padding: 0, cursor: "pointer",
+                fontFamily: F, fontSize: 12, color: T.ink2, textAlign: "left",
+                marginBottom: 14,
+              }}
+            >
+              Retract validation
+            </button>
           )}
           <button
             onClick={() => setShowValidatedModal(false)}
