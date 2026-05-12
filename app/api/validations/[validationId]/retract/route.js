@@ -2,6 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { isFeatureEnabled } from "@/lib/features";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -49,6 +50,11 @@ export async function POST(req, { params }) {
     .single();
   if (profileErr || !profile) {
     return NextResponse.json({ error: "profile_not_found" }, { status: 404 });
+  }
+
+  const enabled = await isFeatureEnabled(admin, profile.id, "payout_validation");
+  if (!enabled) {
+    return NextResponse.json({ error: "not_enabled" }, { status: 403 });
   }
 
   const { data: validation, error: vErr } = await admin

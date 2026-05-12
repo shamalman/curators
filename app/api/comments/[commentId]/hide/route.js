@@ -2,6 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { isFeatureEnabled } from "@/lib/features";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -76,6 +77,11 @@ export async function POST(req, { params }) {
     return NextResponse.json({ error: check.error }, { status: check.status });
   }
 
+  const enabled = await isFeatureEnabled(admin, check.profile.id, "payout_validation");
+  if (!enabled) {
+    return NextResponse.json({ error: "not_enabled" }, { status: 403 });
+  }
+
   const hiddenAt = new Date().toISOString();
   const { error: updateErr } = await admin
     .from("comments")
@@ -107,6 +113,11 @@ export async function DELETE(req, { params }) {
   const check = await authAndOwnsRec(commentId, user.id, supabase, admin);
   if (check.error) {
     return NextResponse.json({ error: check.error }, { status: check.status });
+  }
+
+  const enabled = await isFeatureEnabled(admin, check.profile.id, "payout_validation");
+  if (!enabled) {
+    return NextResponse.json({ error: "not_enabled" }, { status: 403 });
   }
 
   const { error: updateErr } = await admin
