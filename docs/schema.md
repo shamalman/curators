@@ -30,10 +30,13 @@ Categories (recommendations + rec_files): watch | listen | read | visit | get | 
 | social_links | jsonb | YES |
 | weekly_digest_enabled | boolean | YES |
 | new_subscriber_email_enabled | boolean | YES |
+| new_rec_email_enabled | boolean | YES |
+| validation_received_email_enabled | boolean | YES |
 | unlimited_invites | boolean | YES |
+| is_tester | boolean | YES |
 | feature_flags | jsonb | NO |
 
-Notes: `invited_by` → `profiles.id`. `feature_flags` = JSONB flag map, no active callers as of 2026-04-11.
+Notes: `invited_by` → `profiles.id`. `feature_flags` = JSONB flag map keyed by feature name; payouts flags listed in `docs/payouts.md`. Per-type opt-out columns (`weekly_digest_enabled`, `new_subscriber_email_enabled`, `new_rec_email_enabled`, `validation_received_email_enabled`) default true; helpers in `lib/email/` and `app/api/email-action/route.js` check explicit `false` as the only skip signal.
 
 ## recommendations
 | Column | Type | Nullable |
@@ -321,6 +324,80 @@ Notes: Uses `user_id` (not `profile_id`) — inconsistent, flagged for future mi
 | name | text | NO |
 | price | numeric | YES |
 | created_at | timestamptz | YES |
+
+## validations
+| Column | Type | Nullable | Default |
+|---|---|---|---|
+| id | uuid | NO | gen_random_uuid() |
+| subscriber_id | uuid | NO | (FK profiles.id, ON DELETE CASCADE) |
+| curator_id | uuid | NO | (FK profiles.id, ON DELETE CASCADE) |
+| rec_id | uuid | NO | (FK recommendations.id, ON DELETE CASCADE) |
+| verbatim_text | text | NO |  |
+| sent_to_curator | boolean | NO | true |
+| posted_publicly | boolean | NO | true |
+| retracted_at | timestamptz | YES |  |
+| created_at | timestamptz | NO | now() |
+
+Notes: source-of-truth row for the money-attached subscriber affirmation. Unique constraint `validations_subscriber_rec_unique (subscriber_id, rec_id)` enforces one-per-pair-ever (no re-validation after retract). Soft-delete via `retracted_at`. Indexes on `curator_id` and `rec_id`. RLS enabled.
+
+RLS policies:
+- SELECT: subscriber can read own; curator can read validations on own recs.
+- INSERT: subscriber_id must match caller's profile.
+- UPDATE: subscriber_id must match caller's profile (retraction path).
+- DELETE: no policy (hard delete blocked).
+
+## comments
+| Column | Type | Nullable | Default |
+|---|---|---|---|
+| id | uuid | NO | gen_random_uuid() |
+| profile_id | uuid | NO | (FK profiles.id, ON DELETE CASCADE) |
+| rec_id | uuid | NO | (FK recommendations.id, ON DELETE CASCADE) |
+| body | text | NO |  |
+| validation_id | uuid | YES | (FK validations.id, ON DELETE SET NULL) |
+| deleted_at | timestamptz | YES |  |
+| hidden_by_curator_at | timestamptz | YES |  |
+| created_at | timestamptz | NO | now() |
+| updated_at | timestamptz | NO | now() |
+
+Notes: shared table for validation-attached comments and (future) standalone comments. `validation_id` is optional; when set, the comment is the public surface of that validation. Soft-delete via `deleted_at` (owner). Curator hide-on-rec via `hidden_by_curator_at` (service-role endpoint). Indexes on `rec_id`, `profile_id`, `validation_id`. RLS enabled.
+
+RLS policies:
+- SELECT: anyone authenticated reads non-deleted, non-hidden comments. Owner can read own comments even when curator-hidden.
+- INSERT: profile_id must match caller's profile.
+- UPDATE: profile_id must match caller's profile (24-hour edit window enforced in route).
+- DELETE: no policy (hard delete blocked; soft-delete via UPDATE deleted_at).
+
+## threads
+| Column | Type | Nullable | Default |
+|---|---|---|---|
+| id | uuid | NO | gen_random_uuid() |
+| subscriber_id | uuid | NO | (FK profiles.id, ON DELETE CASCADE) |
+| curator_id | uuid | NO | (FK profiles.id, ON DELETE CASCADE) |
+| last_message_at | timestamptz | NO | now() |
+| created_at | timestamptz | NO | now() |
+
+Notes: per-pair threading substrate. Unique constraint `threads_unique_pair (subscriber_id, curator_id)`. CHECK `threads_distinct_participants (subscriber_id <> curator_id)`. Indexes on `subscriber_id`, `curator_id`, and `last_message_at DESC`. RLS enabled.
+
+RLS policies:
+- SELECT: either participant can read.
+- INSERT: caller must be one of the participants.
+- UPDATE: either participant can update (used by the `last_message_at` touch on reply send, added in migration 008).
+
+## thread_messages
+| Column | Type | Nullable | Default |
+|---|---|---|---|
+| id | uuid | NO | gen_random_uuid() |
+| thread_id | uuid | NO | (FK threads.id, ON DELETE CASCADE) |
+| sender_id | uuid | NO | (FK profiles.id, ON DELETE CASCADE) |
+| body | text | NO |  |
+| validation_id | uuid | YES | (FK validations.id, ON DELETE SET NULL) |
+| created_at | timestamptz | NO | now() |
+
+Notes: messages within a thread. Validation-originated messages carry a `validation_id` link so the messages UI can render the rec card and retracted state. Indexes on `(thread_id, created_at)` for ordering and `sender_id`. RLS enabled.
+
+RLS policies:
+- SELECT: caller must be a participant of the parent thread.
+- INSERT: caller's profile must be `sender_id` AND caller must be a participant of the parent thread.
 
 ## Legacy tables (safe to drop after confirming no RLS/triggers)
 - `curator_taste_profiles` — superseded by `taste_profiles`, no active code paths as of 2026-04-10

@@ -164,13 +164,9 @@ Full mechanics: `docs/notifications.md`.
 
 ### Invite System
 
-Single source of truth: `/invite`. Settings has no invite UI. `InviteModal.jsx` was deleted; Sidebar and CuratorShell route to `/invite` directly.
+Single source of truth: `/invite` (`app/(curator)/invite/page.js`). Settings has no invite UI. API `app/api/invite/route.js`: `GET` requires `?mode=all&status=pending|used&offset=&limit=`; `POST { action: 'generate' }` or `POST { codeId, inviterNote }`; `DELETE { codeId, profileId }` for soft-revoke (cookie-auth, ownership-checked). Cap `MAX_UNUSED_INVITES` in `lib/constants.js` (25; bypassed when `profiles.unlimited_invites = true`).
 
-- **Page**: `app/(curator)/invite/page.js` — sticky header with counts and Generate button, `Pending | Used` tabs, `Show more` pagination (10/page), pending rows always expanded with note + Copy/Share/Revoke, used rows collapsed by default.
-- **API**: `app/api/invite/route.js`. `GET` requires `?mode=all&status=pending|used&offset=&limit=`; bare GET returns 400. `POST { action: 'generate' }` or `POST { codeId, inviterNote }` for note save. `DELETE { codeId, profileId }` for soft-revoke (cookie-auth + ownership check).
-- **Cap**: `MAX_UNUSED_INVITES` exported from `lib/constants.js` (currently 25). Bypassed when `profiles.unlimited_invites = true`.
-- **Signup TOCTOU**: `app/signup/page.js` validates `revoked_at IS NULL` upfront and re-filters on the redeem `UPDATE`. If the redeem update affects zero rows (code revoked mid-flow), abort path calls `POST /api/auth/cleanup-orphan` (best-effort), `signOut()`, and throws.
-- **Cleanup endpoint**: `app/api/auth/cleanup-orphan/route.js` deletes orphan `auth.users` + `profiles` rows. Verifies ownership (cookie session must match `authUserId`), orphan window (< 5 min old), and zero recommendations before deleting.
+Signup TOCTOU: `app/signup/page.js` validates `revoked_at IS NULL` upfront and re-filters on the redeem `UPDATE`. Zero-row update calls `POST /api/auth/cleanup-orphan` (best-effort), `signOut()`, and throws. Cleanup endpoint deletes orphan auth.users + profiles rows after verifying cookie ownership, < 5 min age, and zero recommendations.
 
 ### Source Parsers
 
@@ -274,6 +270,8 @@ Full schema with column types: `docs/schema.md`. Rec files migration: `docs/rec-
 
 `unsupported_source_requests` does not exist in DB (confirmed 2026-04-10 audit).
 
+Roadmap and open tickets live in the Claude.ai project files (not in this repo). Update the roadmap doc there when shipping changes that affect P0/P1 items.
+
 ---
 
 ## Local Dev Verification
@@ -284,79 +282,19 @@ Full schema with column types: `docs/schema.md`. Rec files migration: `docs/rec-
 - **Syntax check JSX**: `npx tsc --noEmit --jsx preserve --allowJs --target esnext --module esnext --moduleResolution node --resolveJsonModule --skipLibCheck --noResolve path/to/file.jsx`
 - **Manual read** — confirm imports resolve, JSX is balanced, all referenced state hooks are declared.
 
-Real verification is `git push` + Vercel deploy + curl the live route. After deploy, hard-refresh Safari. After module-state changes, force a fresh build (empty commit + push) and wait 5–10 min for Fluid Compute warm instances to cycle.
+Real verification is `git push` + Vercel deploy + curl the live route. After deploy, hard-refresh Safari. After module-state changes, force a fresh build (empty commit + push) and wait 5-10 min for Fluid Compute warm instances to cycle.
 
 ---
 
-## Open Work
+## Payouts System
 
-Roadmap and open tickets live in the Claude.ai project files (not in this repo). Update the roadmap doc there when shipping changes that affect P0/P1 items.
+Phase A substrate shipped May 2026 across Threads 1-5 and 7 (staging-only behind feature flags + `is_tester=true` on @shamal, @chris, @testmctesty). Full implementation history, table definitions, endpoint contracts, and feature flag list live in `docs/payouts.md`. Table shapes also documented in `docs/schema.md` under `validations`, `comments`, `threads`, `thread_messages`. Open questions and decisions pending tester evaluation week tracked in the Claude.ai project tracking doc.
 
----
+### Payouts deferred to post-evaluation threads
 
-## Payouts System (in progress, staging-only)
-
-Phase 1 of the payouts system shipped 2026-05-08. Validation capture core lives behind feature flag `payout_validation` AND `is_tester=true`.
-
-Tables: `validations` (money-attached, one per subscriber+rec), `comments` (shared, includes validation-comments). RLS enabled with subscriber-write / curator-read split on validations; world-read on comments filtered by `deleted_at IS NULL AND hidden_by_curator_at IS NULL`.
-
-Endpoint: `POST /api/validations`. Atomic-ish dual-write: validations row first (source of truth), comment second if posted_publicly, taste_confirmations third (best-effort, type='validation_given'). Failures of writes 2 and 3 logged as `[VALIDATION_COMMENT_WRITE_FAILED]` and `[VALIDATION_RECORD_WRITE_FAILED]` but do not fail the request.
-
-UI: `components/payouts/ValidationSheet.jsx` (bottom-sheet pattern, copies FeedbackSheet structure). Validate button renders on NetworkRecDetail and VisitorRecDetail. Hidden on CuratorRecDetail (own rec).
-
-Feature flag helper: `hasFeature(profile, flagName)` in `lib/features.js`. Takes already-loaded profile, no DB roundtrip.
-
-Phase 2 (Thread 2) shipped 2026-05-09. Threads/messages substrate live + validation email.
-
-- Tables (migration `007_threads_and_messages.sql`): `threads` (one per `(subscriber_id, curator_id)` pair, unique constraint, `last_message_at` for ordering, CHECK distinct participants) and `thread_messages` (FK to thread + sender, optional `validation_id` link). RLS enabled — both participants can SELECT; INSERT requires caller is a participant. No UPDATE policy on `threads` for participants — `last_message_at` touch from the user route fails silently and is logged as `[THREAD_TOUCH_FAILED]`. Thread 4 to revisit.
-- Validation flow now writes a thread message when `sent_to_curator=true` AND subscriber has feature flag `payout_threads`. Atomic find-or-create via `upsert ... onConflict: 'subscriber_id,curator_id'`. Failures logged as `[VALIDATION_THREAD_WRITE_FAILED]`, non-fatal.
-- Validation email sent to curator when curator has feature flag `payout_email`. Helper: `lib/email/sendValidationReceivedEmail.js` (mirrors `sendNewSubscriberEmail.js` shape — never throws, returns `{ ok, sent | skipped, error?, detail? }`). Template: `validationReceivedEmail` in `lib/email-templates.js`. Curator email sourced via `supabase.auth.admin.getUserById(auth_user_id)`, NOT `profiles.email` (column does not exist). Reply CTA links to `/<curatorHandle>/<recSlug>` — no `/recs/[id]` route exists. Failures logged as `[VALIDATION_EMAIL_FAILED]`, non-fatal.
-- Endpoint: `POST /api/threads/[threadId]/messages`. Auth-gated (anon-key + cookies via `@supabase/ssr`), participant-checked, gated by sender's `payout_threads`. Body: `{ body }`. RLS double-enforces participant check.
-- Two new flags Shamal sets manually via SQL: `payout_threads` (subscriber-side, gates substrate writes + reply endpoint) and `payout_email` (curator-side, gates email send).
-
-Phase 3 (Thread 4) shipped 2026-05-09. Messages segment + retract flow + comment endpoints.
-
-- Messages segment in `/subs?segment=messages` gated on `isTester` AND `payout_messages_ui` flag. URL routing via `useSearchParams` (`segment` + `thread` query params). `components/messages/MessagesList.jsx` lists threads sorted by `last_message_at desc`; `components/messages/ThreadDetail.jsx` renders messages with day dividers, validation rec cards, retracted state, and reply input. Page wrapped in `Suspense` for `useSearchParams` build compat.
-- Validation retraction: `POST /api/validations/[id]/retract`. Source of truth is `validations.retracted_at`. Cascades: soft-delete linked comment (best-effort, logged `[VALIDATION_RETRACT_CASCADE_FAILED] comment_soft_delete`) and append `taste_confirmations` row with `type='validation_retracted'` (best-effort, same marker). Existing-validation fetches in RecDetail no longer filter `retracted_at IS NULL` so the muted state can render the retracted copy.
-- Comment endpoints: `PATCH /api/comments/[id]` (24h edit window, owner-only), `DELETE /api/comments/[id]` (soft-delete via `deleted_at`, owner-only), `POST/DELETE /api/comments/[id]/hide` (curator-only via service-role + rec ownership check, writes `hidden_by_curator_at`). Endpoints shipped; rec-detail three-dot menu UI deferred.
-- `threads` UPDATE RLS policy applied (`migrations/008_threads_update_policy.sql`) — participants can now touch `last_message_at` from the user-session route. `[THREAD_TOUCH_FAILED]` should no longer fire on normal sends.
-- Email reply CTA from `validationReceivedEmail` now points to `/subs?segment=messages&thread={id}` when threadId is available; falls back to `/<curatorHandle>/<recSlug>` if not. `/api/validations` returns `thread_id` in the response.
-- New flag Shamal sets manually: `payout_messages_ui` (curator-side, gates Messages segment in `/subs`).
-
-Phase 4 (Thread 5) shipped 2026-05-09. Allocation segment in Subs (view-only, mocked numbers).
-
-- Fourth segment in `/subs`, gated on `isTester` + `payout_allocation_ui` flag (server + client).
-- View-only, mocked numbers. `is_projected: true` on every dollar amount.
-- Endpoint: `GET /api/allocation/preview`. Auth-gated, server-side feature-gated via `isFeatureEnabled`.
-- Components: `components/payouts/AllocationView.jsx`, `components/payouts/AllocationHeroBar.jsx`.
-- Hero $10.50 = Activity $5.20 + Floor $1.30 + Unallocated $4.00. Mocked totals locked; Thread 3 replaces with real waterfall math.
-- Activity weights: validation=3, save=1. Last row absorbs rounding remainder. Floor splits evenly across active curators (recommended in last 30d).
-- Flag enabled on @shamal, @chris, @testmctesty.
-- Feature flag column on `profiles` is `feature_flags` (jsonb). Server reads via `lib/features.isFeatureEnabled`.
-- Avatars: `profiles` table has NO avatar column. Endpoint and UI fall back to initial-bubble component when `avatar_url` is null. Logged as a follow-up.
-
-Phase 5 (Thread 3) shipped 2026-05-11. Real allocation math + curator earnings surface.
-
-- **Pure logic** in `lib/allocation/calculate.js` and `lib/allocation/calculate-earnings.js`. Internal currency is hundredths of cents (1 unit = $0.0001) to keep tier-base allocations (60/25/15 of $10.50) as clean integers (63000/26250/15750). Cascade is strictly downward: empty validation → save; empty save → floor; empty floor → unallocated. Within-tier remainder absorbed by highest-count curator (alphabetical handle tiebreak); floor remainder absorbed alphabetically-first.
-- **Dual-path on `/api/allocation/preview`**: `payout_allocation_ui` remains the access gate. `payout_real_math` selects the new calculator (`is_projected: false`) vs the Thread 5 mock. The two flags are independently togglable on purpose.
-- **New endpoint `/api/earnings/preview`**: cookie-session auth + `payout_earnings_ui` gate (403 if disabled). Calls `calculateMonthlyEarnings(curatorId=viewer)`.
-- **Validation email now carries a current-month earnings line**: `/api/validations` runs `calculateMonthlyEarnings` for the curator between thread-message write and email send, wrapped in try/catch. Failure logs `[VALIDATION_EARNINGS_LOOKUP_FAILED]` and passes `curatorEarnings: null` through — email still sends, line is omitted. Template renders the line between Reply CTA and footer only when `parseFloat(curatorEarnings) > 0`.
-- **UI**: `components/payouts/EarningsView.jsx` + `EarningsHero.jsx`. New `/me/earnings` page. `MeSegmentedControl` adds a conditional 4th option in the LAST position (after Public Profile), gated on `isTester && hasFeature(profile, 'payout_earnings_ui')`. Layout's `active` derivation handles `pathname.startsWith('/me/earnings')`.
-- **Signal summary for floor-only contributors** (no validations/saves) reads `subscribed` in the FROM YOUR SUBSCRIBERS list. Honest description for floor-tier earnings.
-- **Flags introduced**: `payout_real_math` (subscriber-side, calculator selector), `payout_earnings_ui` (curator-side, gates `/me/earnings` segment and `/api/earnings/preview`). Both set manually via SQL.
-
-Pending (Thread 6+): Lens monthly prompt, read receipts / unread persistence (no `read_at` column yet), comment three-dot menu UI on rec detail, LockManager auth context fix, atomic dual-write Postgres function for validation flow.
+- **Auth context consolidation** (LockManager band-aids in RecDetail.jsx). VisitorContext currently treats `profile` as the page subject not the viewer, which makes the existing setTimeout workarounds nontrivial to remove. Dedicated thread post-evaluation.
+- **Comment three-dot menu UI on rec detail**. Comment endpoints (PATCH/DELETE/hide) shipped in Thread 4; comment rendering on rec detail does not exist yet. Three-dot menu cannot ship without rendering. Dedicated thread post-evaluation.
 
 ---
 
-## Documentation Hygiene
-
-This file is the operating manual, not the architecture spec. When adding content, ask:
-
-1. **Does this materially change Claude's decisions in every session?** If no, put it in `docs/`.
-2. **Is this discoverable by reading the code?** If yes, don't duplicate it.
-3. **Is this a historical change log?** That belongs in git commit messages, not here.
-
-**Target: under 250 lines, under 20K chars.** Hard ceiling for performance: ~40K. When approaching the target, prune. Move detailed sections into `docs/<feature>.md` and reference inline.
-
-**Update as the final step of every working session.** Stale docs actively cause debugging errors.
+This file is the operating manual, not the architecture spec. Target: under 250 lines, under 20K chars; performance ceiling 40K. When adding content, ask whether it materially changes Claude's decisions in every session, is already discoverable from the code, or is historical change log (belongs in commits, not here). Move detailed sections into `docs/<feature>.md` and reference inline. Update as the final step of every working session.
