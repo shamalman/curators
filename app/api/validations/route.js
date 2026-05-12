@@ -115,56 +115,34 @@ export async function POST(request) {
       return NextResponse.json({ error: "Already validated" }, { status: 409 });
     }
 
-    // 1. Insert validation row (source of truth, money-attached)
-    const { data: validation, error: insErr } = await admin
-      .from("validations")
-      .insert({
-        subscriber_id: subscriberProfile.id,
-        curator_id: curatorId,
-        rec_id,
-        verbatim_text: verbatim_text.trim(),
-        sent_to_curator,
-        posted_publicly,
-      })
-      .select("id")
-      .single();
-    if (insErr || !validation) {
-      console.error("[VALIDATION_INSERT_ERROR]", insErr?.message || "no row returned");
+    // Atomic dual-write: validation + comment (when posted_publicly) inside
+    // a Postgres function. The function also best-effort writes the
+    // taste_confirmations row (failure raised as a server-side warning,
+    // does not roll back the validation).
+    const { data: rpcResult, error: rpcError } = await admin.rpc(
+      "create_validation_atomic",
+      {
+        p_subscriber_id: subscriberProfile.id,
+        p_curator_id: curatorId,
+        p_rec_id: rec_id,
+        p_verbatim_text: verbatim_text.trim(),
+        p_sent_to_curator: sent_to_curator,
+        p_posted_publicly: posted_publicly,
+      }
+    );
+
+    if (rpcError) {
+      console.error("[VALIDATION_INSERT_ERROR]", rpcError.message || rpcError);
       return NextResponse.json({ error: "Validation write failed" }, { status: 500 });
     }
 
-    // 2. Insert comment if posted_publicly
-    let commentId = null;
-    if (posted_publicly) {
-      const { data: comment, error: cmtErr } = await admin
-        .from("comments")
-        .insert({
-          profile_id: subscriberProfile.id,
-          rec_id,
-          body: verbatim_text.trim(),
-          validation_id: validation.id,
-        })
-        .select("id")
-        .single();
-      if (cmtErr) {
-        console.error("[VALIDATION_COMMENT_WRITE_FAILED]", cmtErr.message);
-      } else {
-        commentId = comment?.id || null;
-      }
-    }
+    const row = Array.isArray(rpcResult) ? rpcResult[0] : rpcResult;
+    const validationId = row?.validation_id;
+    const commentId = row?.comment_id ?? null;
 
-    // 3. Insert taste_confirmations row for subscriber's Record
-    // Best-effort: log and continue on failure. Record regen is idempotent.
-    const { error: confErr } = await admin
-      .from("taste_confirmations")
-      .insert({
-        profile_id: subscriberProfile.id,
-        type: "validation_given",
-        observation: verbatim_text.trim(),
-        source: `validation:${validation.id}`,
-      });
-    if (confErr) {
-      console.error("[VALIDATION_RECORD_WRITE_FAILED]", confErr.message);
+    if (!validationId) {
+      console.error("[VALIDATION_INSERT_ERROR]", "no_validation_id_returned");
+      return NextResponse.json({ error: "Validation write failed" }, { status: 500 });
     }
 
     // 4. Thread message + email (best-effort, gated by feature flags).
@@ -203,7 +181,7 @@ export async function POST(request) {
                 thread_id: thread.id,
                 sender_id: subscriberProfile.id,
                 body: verbatim_text.trim(),
-                validation_id: validation.id,
+                validation_id: validationId,
               });
 
             if (msgErr) {
@@ -234,7 +212,7 @@ export async function POST(request) {
       // Curator's payout_email flag is checked inside the helper.
       try {
         const emailResult = await sendValidationReceivedEmail({
-          validationId: validation.id,
+          validationId: validationId,
           threadId: thread?.id,
           supabaseAdmin: admin,
           curatorEarnings,
@@ -248,7 +226,7 @@ export async function POST(request) {
     }
 
     console.log("[VALIDATION_CREATED]", {
-      validationId: validation.id,
+      validationId: validationId,
       subscriberId: subscriberProfile.id,
       curatorId,
       recId: rec_id,
@@ -256,7 +234,7 @@ export async function POST(request) {
     });
 
     return NextResponse.json({
-      validation_id: validation.id,
+      validation_id: validationId,
       comment_id: commentId,
       thread_id: thread?.id || null,
     });
