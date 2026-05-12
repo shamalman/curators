@@ -1,6 +1,7 @@
 'use client'
 
 import { T, F, S } from '@/lib/constants'
+import { formatDollar as fmtDollar } from '@/lib/format-money'
 
 const MONTH_NAMES = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -14,11 +15,6 @@ function formatMonthLabel(monthKey) {
   const monthIdx = parseInt(monthStr, 10) - 1
   if (isNaN(monthIdx) || monthIdx < 0 || monthIdx > 11) return 'This month, in progress'
   return `${MONTH_NAMES[monthIdx]} ${yearStr}, in progress`
-}
-
-function fmtDollar(amount) {
-  const n = parseFloat(amount || '0')
-  return `$${n.toFixed(2)}`
 }
 
 export default function EarningsHero({ month, daysRemaining, totalEarnings, validations, saves, activeSubscribers }) {

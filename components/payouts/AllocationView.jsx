@@ -3,14 +3,9 @@
 import { useEffect, useState } from "react";
 import { T, F, S } from "@/lib/constants";
 import AllocationHeroBar from "./AllocationHeroBar";
+import { formatDollar as fmtDollar } from "@/lib/format-money";
 
 const SERIF_FAMILY = S;
-
-function fmtDollar(amount) {
-  // amount is a string like "5.20"
-  const n = parseFloat(amount || "0");
-  return `$${n.toFixed(2)}`;
-}
 
 export default function AllocationView() {
   const [data, setData] = useState(null);

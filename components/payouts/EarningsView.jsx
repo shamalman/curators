@@ -3,11 +3,7 @@
 import { useEffect, useState } from 'react'
 import { T, F, S } from '@/lib/constants'
 import EarningsHero from './EarningsHero'
-
-function fmtDollar(amount) {
-  const n = parseFloat(amount || '0')
-  return `$${n.toFixed(2)}`
-}
+import { formatDollar as fmtDollar } from '@/lib/format-money'
 
 export default function EarningsView() {
   const [data, setData] = useState(null)

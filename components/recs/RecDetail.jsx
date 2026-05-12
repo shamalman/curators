@@ -12,6 +12,7 @@ import { fetchLinkMetadata } from "@/lib/links/fetchLinkMetadata";
 import LinkDisplay from "@/components/shared/LinkDisplay";
 import ValidationSheet from "@/components/payouts/ValidationSheet";
 import { hasFeature } from "@/lib/features";
+import { formatRelativeTime as formatValidatedAt } from "@/lib/format-time";
 
 // Source types whose body_md is just metadata restated, not substantive prose.
 // For these, the Archived Source section adds no information beyond what's
@@ -129,21 +130,6 @@ const fmtDateFull = (d) => {
   if (isNaN(parsed)) return "";
   return parsed.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 };
-
-function formatValidatedAt(iso) {
-  if (!iso) return '';
-  const d = new Date(iso);
-  const now = new Date();
-  const diffMs = now - d;
-  const diffMin = Math.floor(diffMs / 60000);
-  if (diffMin < 1) return 'just now';
-  if (diffMin < 60) return `${diffMin}m ago`;
-  const diffHr = Math.floor(diffMin / 60);
-  if (diffHr < 24) return `${diffHr}h ago`;
-  const diffDay = Math.floor(diffHr / 24);
-  if (diffDay < 7) return `${diffDay}d ago`;
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-}
 
 /* ── Curator Item Detail ── */
 export function CuratorRecDetail({ slug }) {
