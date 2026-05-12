@@ -34,6 +34,7 @@ export default function SettingsView() {
   const [weeklyDigest, setWeeklyDigest] = useState(true)
   const [newSubscriber, setNewSubscriber] = useState(true)
   const [newRec, setNewRec] = useState(true)
+  const [validationReceived, setValidationReceived] = useState(true)
   const [prefsLoaded, setPrefsLoaded] = useState(false)
   const [showResetModal, setShowResetModal] = useState(false)
   const [resetInput, setResetInput] = useState("")
@@ -50,7 +51,7 @@ export default function SettingsView() {
     if (!profileId) return
     supabase
       .from("profiles")
-      .select("weekly_digest_enabled, new_subscriber_email_enabled, new_rec_email_enabled")
+      .select("weekly_digest_enabled, new_subscriber_email_enabled, new_rec_email_enabled, validation_received_email_enabled")
       .eq("id", profileId)
       .single()
       .then(({ data }) => {
@@ -58,6 +59,7 @@ export default function SettingsView() {
           setWeeklyDigest(data.weekly_digest_enabled !== false)
           setNewSubscriber(data.new_subscriber_email_enabled !== false)
           setNewRec(data.new_rec_email_enabled !== false)
+          setValidationReceived(data.validation_received_email_enabled !== false)
         }
         setPrefsLoaded(true)
       })
@@ -103,6 +105,19 @@ export default function SettingsView() {
     if (error) {
       console.error("Failed to update new_rec_email_enabled:", error)
       setNewRec(!next)
+    }
+  }
+
+  const toggleValidationReceived = async () => {
+    const next = !validationReceived
+    setValidationReceived(next)
+    const { error } = await supabase
+      .from("profiles")
+      .update({ validation_received_email_enabled: next })
+      .eq("id", profileId)
+    if (error) {
+      console.error("Failed to update validation_received_email_enabled:", error)
+      setValidationReceived(!next)
     }
   }
 
@@ -163,6 +178,9 @@ export default function SettingsView() {
             )}
             {settingRow("New rec", "When curators you subscribe to save a new rec",
               <Toggle on={newRec} onToggle={toggleNewRec} />
+            )}
+            {settingRow("Validation received", "When a subscriber validates one of your recs",
+              <Toggle on={validationReceived} onToggle={toggleValidationReceived} />
             )}
           </div>
 
