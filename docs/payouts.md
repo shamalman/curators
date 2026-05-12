@@ -90,6 +90,10 @@ All set manually via SQL on `profiles.feature_flags` (jsonb).
 | `payout_real_math` | subscriber | On /api/allocation/preview, selects the real calculator vs the Thread 5 mock. Independent of `payout_allocation_ui`. |
 | `payout_earnings_ui` | curator | Gates /me/earnings segment and /api/earnings/preview. |
 
+## Deliverability notes
+
+Validation-received email landed in Gmail Primary tab on 2026-05-11 during Thread 7 close-out. Sender: `notifications@curators.ai`. List-Unsubscribe header present (one-click). No mitigations required.
+
 ## Pending (Thread 8+)
 
 - Auth context consolidation (LockManager band-aids in RecDetail.jsx). VisitorContext currently treats `profile` as the page subject not the viewer, which makes the existing setTimeout workarounds nontrivial to remove. Deferred to a dedicated post-evaluation thread.
@@ -98,7 +102,3 @@ All set manually via SQL on `profiles.feature_flags` (jsonb).
 - Lens monthly prompt.
 - Read receipts / unread persistence (no `read_at` column on `thread_messages` yet).
 - Schema doc for `payout_messages_ui`, `payout_threads`, etc. consumers if more flags are added.
-
-### Deliverability notes
-
-Validation-received email landed in Gmail Primary tab on 2026-05-11 during Thread 7 close-out. Sender: `notifications@curators.ai`. List-Unsubscribe header present (one-click). No mitigations required.
