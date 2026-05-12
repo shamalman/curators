@@ -335,8 +335,6 @@ Phase 4 (Thread 5) shipped 2026-05-09. Allocation segment in Subs (view-only, mo
 - Feature flag column on `profiles` is `feature_flags` (jsonb). Server reads via `lib/features.isFeatureEnabled`.
 - Avatars: `profiles` table has NO avatar column. Endpoint and UI fall back to initial-bubble component when `avatar_url` is null. Logged as a follow-up.
 
-**Temporary reconciliation endpoint** (added during Thread 3, Step B): `GET /api/verify-thread3/allocation?subscriber=<handle>` or `?earnings=<handle>`. Cookie-session auth + hard handle allowlist (shamal/chris/testmctesty). Bypasses `payout_real_math` and `payout_earnings_ui` flags so the calculator can be hand-math reconciled against production data without a local Node env. Calls `calculateMonthlyAllocation` / `calculateMonthlyEarnings` from `lib/allocation/`. Folder is intentionally NOT underscore-prefixed (Next.js app router treats `_folder/` as private and excludes it from routing). **Delete in Thread 7 cleanup** along with the rest of the verification scaffolding.
-
 Phase 5 (Thread 3) shipped 2026-05-11. Real allocation math + curator earnings surface.
 
 - **Pure logic** in `lib/allocation/calculate.js` and `lib/allocation/calculate-earnings.js`. Internal currency is hundredths of cents (1 unit = $0.0001) to keep tier-base allocations (60/25/15 of $10.50) as clean integers (63000/26250/15750). Cascade is strictly downward: empty validation → save; empty save → floor; empty floor → unallocated. Within-tier remainder absorbed by highest-count curator (alphabetical handle tiebreak); floor remainder absorbed alphabetically-first.
@@ -345,7 +343,6 @@ Phase 5 (Thread 3) shipped 2026-05-11. Real allocation math + curator earnings s
 - **Validation email now carries a current-month earnings line**: `/api/validations` runs `calculateMonthlyEarnings` for the curator between thread-message write and email send, wrapped in try/catch. Failure logs `[VALIDATION_EARNINGS_LOOKUP_FAILED]` and passes `curatorEarnings: null` through — email still sends, line is omitted. Template renders the line between Reply CTA and footer only when `parseFloat(curatorEarnings) > 0`.
 - **UI**: `components/payouts/EarningsView.jsx` + `EarningsHero.jsx`. New `/me/earnings` page. `MeSegmentedControl` adds a conditional 4th option in the LAST position (after Public Profile), gated on `isTester && hasFeature(profile, 'payout_earnings_ui')`. Layout's `active` derivation handles `pathname.startsWith('/me/earnings')`.
 - **Signal summary for floor-only contributors** (no validations/saves) reads `subscribed` in the FROM YOUR SUBSCRIBERS list. Honest description for floor-tier earnings.
-- **Verification scripts**: `scripts/verify-allocation.mjs` (CLI, service-role) and `app/api/verify-thread3/allocation/route.js` (in-prod, handle-allowlisted). Both are Thread 7 deletion candidates.
 - **Flags introduced**: `payout_real_math` (subscriber-side, calculator selector), `payout_earnings_ui` (curator-side, gates `/me/earnings` segment and `/api/earnings/preview`). Both set manually via SQL.
 
 Pending (Thread 6+): Lens monthly prompt, read receipts / unread persistence (no `read_at` column yet), comment three-dot menu UI on rec detail, LockManager auth context fix, atomic dual-write Postgres function for validation flow.
