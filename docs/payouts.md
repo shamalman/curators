@@ -99,8 +99,6 @@ All set manually via SQL on `profiles.feature_flags` (jsonb).
 - Read receipts / unread persistence (no `read_at` column on `thread_messages` yet).
 - Schema doc for `payout_messages_ui`, `payout_threads`, etc. consumers if more flags are added.
 
-## Deliverability notes
+### Deliverability notes
 
-Recorded per email type and tested in Gmail web (the only client where inbox tabs are visible).
-
-(Pending Thread 7 Commit 10 runtime test.)
+Validation-received email landed in Gmail Primary tab on 2026-05-11 during Thread 7 close-out. Sender: `notifications@curators.ai`. List-Unsubscribe header present (one-click). No mitigations required.
