@@ -3,6 +3,7 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { isFeatureEnabled } from "@/lib/features";
+import { getProfileAvatarUrl } from "@/lib/profile-avatar";
 import {
   calculateMonthlyAllocation,
   startOfMonthISO as calcStartOfMonth,
@@ -236,7 +237,8 @@ export async function GET() {
       console.error("[ALLOCATION_PROFILES_ERROR]", pErr.message);
       return NextResponse.json({ error: "profiles_query_failed" }, { status: 500 });
     }
-    profileMap = new Map((profs || []).map(p => [p.id, { handle: p.handle, avatar_url: null }]));
+    // TODO: pass authUser when bulk auth lookup is added.
+    profileMap = new Map((profs || []).map(p => [p.id, { handle: p.handle, avatar_url: getProfileAvatarUrl(p, null) }]));
   }
 
   // Block A — Activity (distribute ACTIVITY_TOTAL across curators with signals by weight)
