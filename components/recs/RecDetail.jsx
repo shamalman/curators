@@ -950,25 +950,6 @@ export function VisitorRecDetail({ slug }) {
       return;
     }
 
-    // Subscription check using fresh auth context
-    const { data: sub, error: subErr } = await supabase
-      .from('subscriptions')
-      .select('id')
-      .eq('subscriber_id', resolvedViewer.id)
-      .eq('curator_id', curatorId)
-      .is('unsubscribed_at', null)
-      .maybeSingle();
-
-    if (subErr) {
-      console.error('[VALIDATION_VISITOR_SUB_CHECK_ERROR]', subErr.message);
-      alert('Could not check subscription. Reload the page and try again.');
-      return;
-    }
-    if (!sub) {
-      alert(`Subscribe to @${profile.handle.replace('@', '')} to cosign this recommendation.`);
-      return;
-    }
-
     setShowValidationSheet(true);
   };
   const bndls = itemBundlesMap[selectedItem.id] || [];
@@ -1559,8 +1540,7 @@ export function NetworkRecDetail({ slug }) {
   const canShowValidate =
     profile?.isTester === true &&
     hasFeature(profile, 'payout_validation') &&
-    curator?.id !== profileId &&
-    isSubscribed;
+    curator?.id !== profileId;
 
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minHeight: 0 }}>

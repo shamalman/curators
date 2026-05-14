@@ -2,7 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import { hasFeature } from "@/lib/features";
+import { hasFeature, isFeatureEnabled } from "@/lib/features";
 import { sendValidationReceivedEmail } from "@/lib/email/sendValidationReceivedEmail";
 import { calculateMonthlyEarnings } from "@/lib/allocation/calculate-earnings";
 import { startOfMonthISO, startOfNextMonthISO } from "@/lib/allocation/calculate";
@@ -61,7 +61,7 @@ export async function POST(request) {
     // Resolve subscriber profile
     const { data: subscriberProfile, error: subErr } = await admin
       .from("profiles")
-      .select("id, handle")
+      .select("id, handle, is_tester")
       .eq("auth_user_id", user.id)
       .single();
     if (subErr || !subscriberProfile) {
@@ -84,20 +84,10 @@ export async function POST(request) {
       return NextResponse.json({ error: "Cannot cosign your own recommendation" }, { status: 400 });
     }
 
-    // Confirm subscription is active
-    const { data: sub, error: subFetchErr } = await admin
-      .from("subscriptions")
-      .select("id")
-      .eq("subscriber_id", subscriberProfile.id)
-      .eq("curator_id", curatorId)
-      .is("unsubscribed_at", null)
-      .maybeSingle();
-    if (subFetchErr) {
-      console.error("[VALIDATION_SUB_CHECK_ERROR]", subFetchErr.message);
-      return NextResponse.json({ error: "Subscription check failed" }, { status: 500 });
-    }
-    if (!sub) {
-      return NextResponse.json({ error: "Not subscribed to curator" }, { status: 403 });
+    // Cosign is in private testing: require is_tester + payout_validation flag.
+    const flagEnabled = await isFeatureEnabled(admin, subscriberProfile.id, "payout_validation");
+    if (subscriberProfile.is_tester !== true || !flagEnabled) {
+      return NextResponse.json({ error: "not_enabled" }, { status: 403 });
     }
 
     // Block duplicate non-retracted validation
