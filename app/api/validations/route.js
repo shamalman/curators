@@ -81,7 +81,7 @@ export async function POST(request) {
 
     // Block self-validation
     if (curatorId === subscriberProfile.id) {
-      return NextResponse.json({ error: "Cannot validate own rec" }, { status: 400 });
+      return NextResponse.json({ error: "Cannot cosign your own recommendation" }, { status: 400 });
     }
 
     // Confirm subscription is active
@@ -109,10 +109,10 @@ export async function POST(request) {
       .maybeSingle();
     if (existingErr) {
       console.error("[VALIDATION_EXISTING_CHECK_ERROR]", existingErr.message);
-      return NextResponse.json({ error: "Existing-validation check failed" }, { status: 500 });
+      return NextResponse.json({ error: "Existing-cosign check failed" }, { status: 500 });
     }
     if (existing && !existing.retracted_at) {
-      return NextResponse.json({ error: "Already validated" }, { status: 409 });
+      return NextResponse.json({ error: "Already cosigned" }, { status: 409 });
     }
 
     // Atomic dual-write: validation + comment (when posted_publicly) inside
@@ -133,7 +133,7 @@ export async function POST(request) {
 
     if (rpcError) {
       console.error("[VALIDATION_INSERT_ERROR]", rpcError.message || rpcError);
-      return NextResponse.json({ error: "Validation write failed" }, { status: 500 });
+      return NextResponse.json({ error: "Cosign write failed" }, { status: 500 });
     }
 
     const row = Array.isArray(rpcResult) ? rpcResult[0] : rpcResult;
@@ -142,7 +142,7 @@ export async function POST(request) {
 
     if (!validationId) {
       console.error("[VALIDATION_INSERT_ERROR]", "no_validation_id_returned");
-      return NextResponse.json({ error: "Validation write failed" }, { status: 500 });
+      return NextResponse.json({ error: "Cosign write failed" }, { status: 500 });
     }
 
     // 4. Thread message + email (best-effort, gated by feature flags).

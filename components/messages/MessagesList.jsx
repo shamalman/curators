@@ -98,8 +98,8 @@ export default function MessagesList({ onOpenThread }) {
 
   if (rows.length === 0) {
     const copy = iAmCurator
-      ? "No messages yet. When subscribers tell you about recs that landed, their notes will appear here."
-      : "No messages yet. When you send a curator a note about a rec that landed, it'll appear here.";
+      ? "No messages yet. When subscribers cosign one of your recommendations, their notes will appear here."
+      : "No messages yet. When you cosign a recommendation, your note will appear here.";
     return (
       <div style={{ padding: "40px 24px", textAlign: "center", color: T.ink3, fontFamily: F, fontSize: 13, lineHeight: 1.5 }}>
         {copy}

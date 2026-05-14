@@ -175,7 +175,7 @@ export default function AllocationView() {
         marginBottom: 24,
       }}>
         <strong style={{ color: T.ink2, fontWeight: 600 }}>How this works.</strong>{" "}
-        Your $10.50 follows what you do — what you say landed (60%), what you save (25%), and the curators you've subscribed to (15%). Active curators are those who recommended at least once in the last 30 days. Unused tiers cascade at month end so nothing evaporates.
+        Your $10.50 follows what you do — what you cosign (60%), what you save (25%), and the active curators you've subscribed to (15%). Active curators are those who recommended at least once in the last 30 days. Unused tiers cascade at month end so nothing evaporates.
       </div>
     </div>
   );
@@ -215,7 +215,7 @@ function BlockHeader({ label, amount }) {
 
 function ActivityRow({ row }) {
   const signals = [];
-  if (row.validations > 0) signals.push(`${row.validations} validation${row.validations === 1 ? "" : "s"}`);
+  if (row.validations > 0) signals.push(`${row.validations} cosign${row.validations === 1 ? "" : "s"}`);
   if (row.saves > 0) signals.push(`${row.saves} save${row.saves === 1 ? "" : "s"}`);
   const summary = signals.join(" · ");
 

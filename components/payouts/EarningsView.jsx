@@ -90,7 +90,7 @@ export default function EarningsView() {
         activeSubscribers={data.hero?.active_subscribers}
       />
 
-      <SectionHeader label="TOP RECS THIS MONTH" />
+      <SectionHeader label="TOP RECOMMENDATIONS THIS MONTH" />
       {(!data.top_recs || data.top_recs.length === 0) ? (
         <EmptyState text="No earnings yet this month." />
       ) : (
@@ -189,7 +189,7 @@ function RecRow({ rec }) {
 
 function SubscriberRow({ row }) {
   const signals = []
-  if (row.validations > 0) signals.push(`${row.validations} validation${row.validations === 1 ? '' : 's'}`)
+  if (row.validations > 0) signals.push(`${row.validations} cosign${row.validations === 1 ? '' : 's'}`)
   if (row.saves > 0) signals.push(`${row.saves} save${row.saves === 1 ? '' : 's'}`)
   const summary = signals.length > 0 ? signals.join(' · ') : 'subscribed'
 

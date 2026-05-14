@@ -946,7 +946,7 @@ export function VisitorRecDetail({ slug }) {
     const isViewerTester = resolvedViewer.is_tester === true;
     const flagOn = (resolvedViewer.feature_flags || {}).payout_validation === true;
     if (!isViewerTester || !flagOn) {
-      alert('Validation is in private testing.');
+      alert('Cosign is in private testing.');
       return;
     }
 
@@ -965,7 +965,7 @@ export function VisitorRecDetail({ slug }) {
       return;
     }
     if (!sub) {
-      alert(`Subscribe to @${profile.handle.replace('@', '')} to validate this rec.`);
+      alert(`Subscribe to @${profile.handle.replace('@', '')} to cosign this recommendation.`);
       return;
     }
 
@@ -1044,7 +1044,7 @@ export function VisitorRecDetail({ slug }) {
                 fontFamily: F, fontSize: 14, fontWeight: 600,
                 cursor: 'pointer',
               }}
-            >Validate this Rec</button>
+            >Cosign</button>
           )}
 
           {canShowValidate && validationFetched && existingValidation && (
@@ -1057,7 +1057,7 @@ export function VisitorRecDetail({ slug }) {
                 fontFamily: F, fontSize: 14, fontWeight: 600,
                 cursor: 'pointer',
               }}
-            >Validated · {formatValidatedAt(existingValidation.created_at)}</button>
+            >Cosigned · {formatValidatedAt(existingValidation.created_at)}</button>
           )}
 
           <MediaEmbed
@@ -1300,7 +1300,7 @@ export function VisitorRecDetail({ slug }) {
           padding: '20px 22px', zIndex: 1000, fontFamily: F,
         }}>
           <div style={{ fontSize: 11, color: T.ink3, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 8, fontWeight: 700 }}>
-            Your validation
+            Your cosign
           </div>
           <div style={{
             fontSize: 14, color: T.ink, marginBottom: 14, lineHeight: 1.5,
@@ -1333,7 +1333,7 @@ export function VisitorRecDetail({ slug }) {
                 marginBottom: 14,
               }}
             >
-              Retract validation
+              Withdraw cosign
             </button>
           )}
           <button
@@ -1363,10 +1363,10 @@ export function VisitorRecDetail({ slug }) {
           padding: '20px 22px', zIndex: 1002, fontFamily: F,
         }}>
           <div style={{ fontSize: 15, fontWeight: 700, color: T.ink, marginBottom: 8 }}>
-            Retract this validation?
+            Withdraw this cosign?
           </div>
           <div style={{ fontSize: 13, color: T.ink2, marginBottom: 16, lineHeight: 1.4 }}>
-            Your note stays in the thread but will be marked as retracted. Allocation for this rec is removed.
+            Your note stays in the thread but will be marked as withdrawn. Allocation for this recommendation is removed.
           </div>
           <div style={{ display: "flex", gap: 8 }}>
             <button
@@ -1385,7 +1385,7 @@ export function VisitorRecDetail({ slug }) {
                 background: 'transparent', color: T.ink2, border: `1px solid ${T.bdr}`, borderRadius: 10,
                 cursor: retracting ? 'default' : 'pointer',
               }}
-            >{retracting ? "Retracting..." : "Retract"}</button>
+            >{retracting ? "Withdrawing..." : "Withdraw"}</button>
           </div>
         </div>
       )}
@@ -1656,7 +1656,7 @@ export function NetworkRecDetail({ slug }) {
                   fontFamily: F, fontSize: 14, fontWeight: 600,
                   cursor: 'pointer',
                 }}
-              >Validate this Rec</button>
+              >Cosign</button>
             )}
 
             {canShowValidate && validationFetched && existingValidation && (
@@ -1669,7 +1669,7 @@ export function NetworkRecDetail({ slug }) {
                   fontFamily: F, fontSize: 14, fontWeight: 600,
                   cursor: 'pointer',
                 }}
-              >Validated · {formatValidatedAt(existingValidation.created_at)}</button>
+              >Cosigned · {formatValidatedAt(existingValidation.created_at)}</button>
             )}
 
             <MediaEmbed
@@ -1731,7 +1731,7 @@ export function NetworkRecDetail({ slug }) {
           padding: '20px 22px', zIndex: 1000, fontFamily: F,
         }}>
           <div style={{ fontSize: 11, color: T.ink3, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 8, fontWeight: 700 }}>
-            Your validation
+            Your cosign
           </div>
           <div style={{
             fontSize: 14, color: T.ink, marginBottom: 14, lineHeight: 1.5,
@@ -1764,7 +1764,7 @@ export function NetworkRecDetail({ slug }) {
                 marginBottom: 14,
               }}
             >
-              Retract validation
+              Withdraw cosign
             </button>
           )}
           <button
@@ -1794,10 +1794,10 @@ export function NetworkRecDetail({ slug }) {
           padding: '20px 22px', zIndex: 1002, fontFamily: F,
         }}>
           <div style={{ fontSize: 15, fontWeight: 700, color: T.ink, marginBottom: 8 }}>
-            Retract this validation?
+            Withdraw this cosign?
           </div>
           <div style={{ fontSize: 13, color: T.ink2, marginBottom: 16, lineHeight: 1.4 }}>
-            Your note stays in the thread but will be marked as retracted. Allocation for this rec is removed.
+            Your note stays in the thread but will be marked as withdrawn. Allocation for this recommendation is removed.
           </div>
           <div style={{ display: "flex", gap: 8 }}>
             <button
@@ -1816,7 +1816,7 @@ export function NetworkRecDetail({ slug }) {
                 background: 'transparent', color: T.ink2, border: `1px solid ${T.bdr}`, borderRadius: 10,
                 cursor: retracting ? 'default' : 'pointer',
               }}
-            >{retracting ? "Retracting..." : "Retract"}</button>
+            >{retracting ? "Withdrawing..." : "Withdraw"}</button>
           </div>
         </div>
       )}

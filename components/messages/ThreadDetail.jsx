@@ -271,7 +271,7 @@ export default function ThreadDetail({ threadId, onBack }) {
                     textTransform: "uppercase", letterSpacing: ".06em", fontWeight: 700,
                     alignSelf: isMine ? "flex-end" : "flex-start",
                   }}>
-                    Retracted
+                    Withdrawn
                   </div>
                 )}
                 {v?.rec && (

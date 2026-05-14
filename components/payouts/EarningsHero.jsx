@@ -60,7 +60,7 @@ export default function EarningsHero({ month, daysRemaining, totalEarnings, vali
         borderRadius: 10,
         border: `1px solid ${T.bdr}`,
       }}>
-        <Stat label="Validations" value={validations || 0} />
+        <Stat label="Cosigns" value={validations || 0} />
         <Stat label="Saves" value={saves || 0} />
         <Stat label="Active subs" value={activeSubscribers || 0} />
       </div>

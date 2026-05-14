@@ -85,8 +85,8 @@ export default function ValidationSheet({ rec, curator, onClose, onSuccess }) {
     <Sheet
       isOpen={true}
       onClose={handleClose}
-      title="Validate this Rec"
-      subtitle={`Tell ${curatorHandle} what worked.`}
+      title="Cosign this Recommendation"
+      subtitle={`Tell ${curatorHandle} how it made you feel.`}
       background={T.bg}
       footer={footer}
     >
@@ -94,7 +94,7 @@ export default function ValidationSheet({ rec, curator, onClose, onSuccess }) {
         ref={textareaRef}
         value={text}
         onChange={(e) => setText(e.target.value)}
-        placeholder="What landed? Be specific. Your words go to the curator and on the rec."
+        placeholder="What worked for you? Be specific. Your words go to the curator and are (optionally) posted as a comment on this recommendation."
         disabled={saving || done}
         rows={5}
         style={{
@@ -120,7 +120,7 @@ export default function ValidationSheet({ rec, curator, onClose, onSuccess }) {
         <ToggleRow
           checked={postPublicly}
           onChange={setPostPublicly}
-          label="Posts your note as a public comment on this rec"
+          label="Posts your note as a public comment on this recommendation"
         />
       </div>
 

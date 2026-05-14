@@ -179,7 +179,7 @@ export default function SettingsView() {
             {settingRow("New rec", "When curators you subscribe to save a new rec",
               <Toggle on={newRec} onToggle={toggleNewRec} />
             )}
-            {settingRow("Validation received", "When a subscriber validates one of your recs",
+            {settingRow("Cosign received", "When a subscriber cosigns one of your recommendations",
               <Toggle on={validationReceived} onToggle={toggleValidationReceived} />
             )}
           </div>
