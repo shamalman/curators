@@ -170,13 +170,13 @@ export default function SettingsView() {
             <div style={{ fontFamily: F, fontSize: 11, fontWeight: 700, color: T.ink3, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>
               Notifications
             </div>
-            {settingRow("Weekly digest", "New recs from curators you subscribe to",
+            {settingRow("Weekly digest", "New recommendations from curators you subscribe to",
               <Toggle on={weeklyDigest} onToggle={toggleWeeklyDigest} />
             )}
             {settingRow("New subscriber", "When someone subscribes to you",
               <Toggle on={newSubscriber} onToggle={toggleNewSubscriber} />
             )}
-            {settingRow("New rec", "When curators you subscribe to save a new rec",
+            {settingRow("New recommendation", "When curators you subscribe to save a new recommendation",
               <Toggle on={newRec} onToggle={toggleNewRec} />
             )}
             {settingRow("Cosign received", "When a subscriber cosigns one of your recommendations",

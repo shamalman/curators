@@ -1039,8 +1039,8 @@ export function VisitorRecDetail({ slug }) {
               onClick={handleValidateTap}
               style={{
                 width: '100%', padding: '12px 14px', marginBottom: 20,
-                background: 'transparent', color: T.ink2,
-                border: '1px solid ' + T.bdr, borderRadius: 12,
+                background: T.accSoft, color: T.acc,
+                border: '1.5px solid ' + T.acc, borderRadius: 12,
                 fontFamily: F, fontSize: 14, fontWeight: 600,
                 cursor: 'pointer',
               }}
@@ -1651,8 +1651,8 @@ export function NetworkRecDetail({ slug }) {
                 onClick={() => setShowValidationSheet(true)}
                 style={{
                   width: '100%', padding: '12px 14px', marginBottom: 20,
-                  background: 'transparent', color: T.ink2,
-                  border: '1px solid ' + T.bdr, borderRadius: 12,
+                  background: T.accSoft, color: T.acc,
+                  border: '1.5px solid ' + T.acc, borderRadius: 12,
                   fontFamily: F, fontSize: 14, fontWeight: 600,
                   cursor: 'pointer',
                 }}
