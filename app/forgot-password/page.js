@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
+import { siteUrl } from "@/lib/site-url"
 import { T, F, S } from "@/lib/constants"
 
 const input = {
@@ -24,7 +25,7 @@ export default function ForgotPasswordPage() {
     setLoading(true)
     try {
       const { error: resetErr } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: "https://curators-ai.vercel.app/reset-password",
+        redirectTo: siteUrl('/reset-password'),
       })
       if (resetErr) throw resetErr
       setSent(true)
