@@ -65,7 +65,7 @@ function formatItem(item, index) {
 function buildExtractionPrompt(sourceType, metadata, items) {
   // Webpage-specific prompt — articles, blog posts, gift guides, reviews
   if (sourceType === "webpage" || metadata.source === "webpage") {
-    return `You are analyzing a webpage/article for a curator on Curators.AI. Your job is to understand what this content reveals about the curator's taste and identify any specific recommendations.
+    return `You are analyzing a webpage/article for a curator on Curators. Your job is to understand what this content reveals about the curator's taste and identify any specific recommendations.
 
 SOURCE INFO:
 Title: ${metadata.title || "Unknown"}
@@ -131,7 +131,7 @@ Respond with JSON only, no markdown code fences:
   }
 
   // Default prompt for structured sources (Spotify, Apple Music, etc.)
-  return `You are analyzing a source for a curator on Curators.AI. Your job is to figure out what each item actually IS, extract genuine recommendations, and analyze the curator's taste.
+  return `You are analyzing a source for a curator on Curators. Your job is to figure out what each item actually IS, extract genuine recommendations, and analyze the curator's taste.
 
 SOURCE INFO:
 Platform: ${metadata.source || sourceType || "Unknown"}
@@ -146,7 +146,7 @@ ${items.map((item, i) => formatItem(item, i)).join("\n")}
 STEP 1 — IDENTIFY EACH ITEM:
 A single source can contain mixed content. A Spotify playlist might have songs AND podcast episodes. A YouTube channel might have music videos AND cooking tutorials. For EACH item, determine:
 - What it actually is: song, album, podcast, episode, video, film, article, restaurant, place, book, product, app, game, etc.
-- Which Curators.AI category it belongs to: watch | listen | read | visit | get | wear | play | other
+- Which Curators category it belongs to: watch | listen | read | visit | get | wear | play | other
   - listen: songs, albums, podcasts, playlists, mixes, EPs, audiobooks
   - watch: films, series, documentaries, videos, anime, standup specials
   - read: books, articles, substacks, essays, newsletters, papers
@@ -360,7 +360,7 @@ export async function POST(request) {
               sourceType: job.source_type,
             });
             const { error: sendErr } = await resend.emails.send({
-              from: 'Curators.AI <notifications@curators.ai>',
+              from: 'Curators <notifications@curators.com>',
               to: user.email,
               subject: 'Your AI finished studying your profiles',
               html,

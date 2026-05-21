@@ -4,6 +4,7 @@ import { cookies } from 'next/headers';
 import { resend } from '@/lib/resend';
 import { generateEmailToken } from '@/lib/email-tokens';
 import { newRecEmail } from '@/lib/email-templates';
+import { siteUrl } from '@/lib/site-url';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -115,7 +116,7 @@ export async function POST(request) {
 
     // Build rec URL
     const cleanHandle = (curator.handle || '').replace(/^@/, '');
-    const recUrl = `https://curators.ai/${cleanHandle}/${rec.slug}`;
+    const recUrl = siteUrl(`/${cleanHandle}/${rec.slug}`);
 
     // Map category to label
     const categoryLabels = {
@@ -150,7 +151,7 @@ export async function POST(request) {
 
         // Generate unsubscribe token
         const token = await generateEmailToken(subscriber.id, 'unsubscribe', { type: 'new_rec_email' });
-        const unsubUrl = `https://curators.ai/api/email-action?token=${token}`;
+        const unsubUrl = siteUrl(`/api/email-action?token=${token}`);
 
         // Build email
         const { subject, html, text } = newRecEmail({
@@ -165,7 +166,7 @@ export async function POST(request) {
 
         // Send
         const { error: sendError } = await resend.emails.send({
-          from: 'Curators.AI <notifications@curators.ai>',
+          from: 'Curators <notifications@curators.com>',
           to: recipientEmail,
           subject,
           html,

@@ -188,7 +188,7 @@ export default function InvitePage() {
   }
 
   const share = (code, id) => {
-    const msg = `Join me on curators.ai with this exclusive invite code: ${code}`
+    const msg = `Join me on curators.com with this exclusive invite code: ${code}`
     if (navigator.share) {
       navigator.share({ text: msg }).catch(() => {})
     } else {

@@ -1,5 +1,5 @@
 NETWORK RECOMMENDATIONS:
-The system injects recommendations from across the Curators.AI network.
+The system injects recommendations from across the Curators network.
 This includes recs from curators you subscribe to and the broader
 network of all public recommendations.
 

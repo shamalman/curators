@@ -137,7 +137,7 @@ export default function SubsView() {
                   <div style={{ height: 1, background: T.bdr, margin: "28px 0" }} />
 
                   <p style={{ fontFamily: F, fontSize: 14, color: T.ink3, lineHeight: 1.6, marginBottom: 16 }}>
-                    Know someone with great taste? Invite them to Curators.ai and subscribe to them.
+                    Know someone with great taste? Invite them to Curators and subscribe to them.
                   </p>
                   <button onClick={() => router.push("/invite")} style={{
                     background: T.acc, border: "none", borderRadius: 10, padding: "12px 20px",
@@ -274,7 +274,7 @@ export default function SubsView() {
                   <div style={{ height: 1, background: T.bdr, margin: "28px 0" }} />
 
                   <p style={{ fontFamily: F, fontSize: 14, color: T.ink3, lineHeight: 1.6, marginBottom: 16 }}>
-                    Know someone with great taste? Invite them to Curators.ai.
+                    Know someone with great taste? Invite them to Curators.
                   </p>
                   <button onClick={() => router.push("/invite")} style={{
                     background: T.acc, border: "none", borderRadius: 10, padding: "12px 20px",

@@ -35,9 +35,9 @@ export async function POST(request) {
     // Send notification email (non-blocking — don't fail the request if this errors)
     try {
       await resend.emails.send({
-        from: "noreply@curators.ai",
+        from: "noreply@curators.com",
         to: "shamal@gmail.com",
-        subject: "New waitlist signup — Curators.ai",
+        subject: "New waitlist signup — Curators",
         text: `New email on the waitlist: ${normalized}\n\nSigned up at: ${new Date().toISOString()}`,
       });
     } catch (emailErr) {

@@ -82,7 +82,7 @@ export async function POST(req) {
     try {
       const screenshotLine = screenshotSignedUrl ? `Screenshot: ${screenshotSignedUrl}\n\n` : '';
       await resend.emails.send({
-        from: 'Curators AI <noreply@curators.ai>',
+        from: 'Curators <noreply@curators.com>',
         to: process.env.FEEDBACK_EMAIL,
         subject: `Feedback from @${handle}`,
         text: `Handle: @${handle}\n\n${screenshotLine}Summary: ${summary}\n\nOriginal message: ${originalMessage}\n\nElaboration: ${elaboration || 'None provided'}\n\nTimestamp: ${new Date().toISOString()}`,

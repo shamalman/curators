@@ -215,7 +215,7 @@ export async function POST(request) {
             // fetched it once internally, but doesn't expose the bytes — a
             // second short-timeout fetch is acceptable for Deploy 2a.
             const htmlResponse = await fetch(url, {
-              headers: { "User-Agent": "Curators.AI/1.0" },
+              headers: { "User-Agent": "Curators/1.0" },
               signal: AbortSignal.timeout(5000),
             });
             if (htmlResponse.ok) {

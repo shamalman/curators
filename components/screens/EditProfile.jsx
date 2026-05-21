@@ -67,7 +67,7 @@ export default function EditProfile() {
             setProfile(p => ({ ...p, handle: v }));
           }} maxLength={21} style={{ width: "100%", padding: "14px 16px", borderRadius: 12, border: `1.5px solid ${T.bdr}`, fontSize: 15, fontFamily: F, outline: "none", background: T.s, color: T.ink }} />
           <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6 }}>
-            <p style={{ fontSize: 11, color: T.ink3, fontFamily: F }}>curators.ai/{profile.handle.replace("@", "")}</p>
+            <p style={{ fontSize: 11, color: T.ink3, fontFamily: F }}>curators.com/{profile.handle.replace("@", "")}</p>
             <p style={{ fontSize: 11, color: T.ink3, fontFamily: F }}>{profile.handle.replace("@", "").length}/20</p>
           </div>
         </div>

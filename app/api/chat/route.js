@@ -874,8 +874,8 @@ ${tasteReadContent}
         try {
           const { resend } = await import('../../../lib/resend.js');
           await resend.emails.send({
-            from: 'Curators AI <noreply@curators.ai>',
-            to: process.env.FEEDBACK_EMAIL || 'shamal@curators.ai',
+            from: 'Curators <noreply@curators.com>',
+            to: process.env.FEEDBACK_EMAIL || 'shamal@curators.com',
             subject: `[Feedback] ${feedback.type}: ${feedback.summary}`,
             text: `Feedback from ${curatorName} (@${curatorHandle}):\n\n"${feedback.message}"\n\nType: ${feedback.type}\nSummary: ${feedback.summary}`,
           });

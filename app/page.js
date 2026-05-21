@@ -103,7 +103,7 @@ export default function SplashPage() {
       <div style={{
         position: "absolute", bottom: 24, left: 0, right: 0, textAlign: "center",
         fontFamily: F, fontSize: 12, color: T.ink3,
-      }}>&copy; 2026 Curators.ai</div>
+      }}>&copy; 2026 Curators</div>
     </div>
   )
 }

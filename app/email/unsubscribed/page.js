@@ -1,4 +1,6 @@
-export const metadata = { title: 'Unsubscribed — Curators.AI' };
+import { siteUrl } from '@/lib/site-url';
+
+export const metadata = { title: 'Unsubscribed — Curators' };
 
 export default function UnsubscribedPage() {
   return (
@@ -12,7 +14,7 @@ export default function UnsubscribedPage() {
           fontSize: 16, fontWeight: 700, color: '#D4956B',
           letterSpacing: '0.02em', marginBottom: 32,
         }}>
-          curators.ai
+          curators.com
         </div>
         <h1 style={{
           fontSize: 22, fontWeight: 600, color: '#E8E2D6',
@@ -26,7 +28,7 @@ export default function UnsubscribedPage() {
           You won't receive these email notifications anymore. You can always
           re-enable them in your settings.
         </p>
-        <a href="https://curators.ai/settings" style={{
+        <a href={siteUrl('/settings')} style={{
           display: 'inline-block', padding: '10px 24px', borderRadius: 8,
           background: '#D4956B', color: '#131210', fontSize: 13,
           fontWeight: 700, textDecoration: 'none',

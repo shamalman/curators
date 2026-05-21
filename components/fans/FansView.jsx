@@ -86,7 +86,7 @@ export default function FansView() {
 
               {/* Secondary section */}
               <p style={{ fontFamily: F, fontSize: 14, color: T.ink3, lineHeight: 1.6, marginBottom: 16 }}>
-                Know someone with great taste? Invite them to Curators.ai.
+                Know someone with great taste? Invite them to Curators.
               </p>
               <button onClick={() => router.push("/invite")} style={{
                 background: "none", border: `1px solid ${T.bdr}`, borderRadius: 10, padding: "12px 20px",

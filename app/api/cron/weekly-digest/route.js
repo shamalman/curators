@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 import { resend } from '@/lib/resend';
 import { generateEmailToken } from '@/lib/email-tokens';
 import { weeklyDigestEmail } from '@/lib/email-templates';
+import { siteUrl } from '@/lib/site-url';
 
 function getServiceClient() {
   return createClient(
@@ -111,7 +112,7 @@ export async function GET(request) {
 
         // Generate unsubscribe token
         const unsubToken = await generateEmailToken(profile.id, 'unsubscribe', { type: 'weekly_digest' });
-        const unsubscribeUrl = `https://curators.ai/api/email-action?token=${unsubToken}`;
+        const unsubscribeUrl = siteUrl(`/api/email-action?token=${unsubToken}`);
 
         // Generate save tokens for each rec
         const recsWithUrls = await Promise.all(recs.map(async (rec) => {
@@ -125,7 +126,7 @@ export async function GET(request) {
             slug: rec.slug,
             curatorName: curator?.name || 'Unknown',
             curatorHandle: curator?.handle || '',
-            saveUrl: `https://curators.ai/api/email-action?token=${saveToken}`,
+            saveUrl: siteUrl(`/api/email-action?token=${saveToken}`),
           };
         }));
 
@@ -157,7 +158,7 @@ export async function GET(request) {
 
         // Send email
         const { error: sendErr } = await resend.emails.send({
-          from: 'Curators.AI <notifications@curators.ai>',
+          from: 'Curators <notifications@curators.com>',
           to: user.email,
           subject,
           html,

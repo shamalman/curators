@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { validateEmailToken, markTokenUsed } from '@/lib/email-tokens';
+import { SITE_URL, siteUrl } from '@/lib/site-url';
 
 function getServiceClient() {
   return createClient(
@@ -13,7 +14,7 @@ export async function GET(request) {
   const token = searchParams.get('token');
 
   if (!token) {
-    return Response.redirect('https://curators.ai', 302);
+    return Response.redirect(SITE_URL, 302);
   }
 
   const supabase = getServiceClient();
@@ -49,7 +50,7 @@ export async function GET(request) {
               .eq('id', tokenData.profile_id);
           }
           await markTokenUsed(tokenData.id);
-          return Response.redirect('https://curators.ai/email/unsubscribed', 302);
+          return Response.redirect(siteUrl('/email/unsubscribed'), 302);
         }
 
         case 'save_rec': {
@@ -64,7 +65,7 @@ export async function GET(request) {
             }
           }
           await markTokenUsed(tokenData.id);
-          return Response.redirect('https://curators.ai/email/saved', 302);
+          return Response.redirect(siteUrl('/email/saved'), 302);
         }
 
         case 'update_settings': {
@@ -76,17 +77,17 @@ export async function GET(request) {
               .eq('id', tokenData.profile_id);
           }
           await markTokenUsed(tokenData.id);
-          return Response.redirect('https://curators.ai/email/unsubscribed', 302);
+          return Response.redirect(siteUrl('/email/unsubscribed'), 302);
         }
       }
     } catch (err) {
       console.error('Email action error:', err);
-      return Response.redirect('https://curators.ai', 302);
+      return Response.redirect(SITE_URL, 302);
     }
   }
 
   // Token not found or expired
-  return Response.redirect('https://curators.ai', 302);
+  return Response.redirect(SITE_URL, 302);
 }
 
 // Support POST for List-Unsubscribe-Post (RFC 8058 one-click)

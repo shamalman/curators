@@ -1,4 +1,6 @@
-export const metadata = { title: 'Rec Saved — Curators.AI' };
+import { SITE_URL } from '@/lib/site-url';
+
+export const metadata = { title: 'Rec Saved — Curators' };
 
 export default function SavedPage() {
   return (
@@ -12,7 +14,7 @@ export default function SavedPage() {
           fontSize: 16, fontWeight: 700, color: '#D4956B',
           letterSpacing: '0.02em', marginBottom: 32,
         }}>
-          curators.ai
+          curators.com
         </div>
         <h1 style={{
           fontSize: 22, fontWeight: 600, color: '#E8E2D6',
@@ -25,12 +27,12 @@ export default function SavedPage() {
         }}>
           You'll find it in your saved recs next time you open the app.
         </p>
-        <a href="https://curators.ai" style={{
+        <a href={SITE_URL} style={{
           display: 'inline-block', padding: '10px 24px', borderRadius: 8,
           background: '#D4956B', color: '#131210', fontSize: 13,
           fontWeight: 700, textDecoration: 'none',
         }}>
-          Open Curators.AI
+          Open Curators
         </a>
       </div>
     </div>

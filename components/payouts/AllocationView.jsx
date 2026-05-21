@@ -78,7 +78,7 @@ export default function AllocationView() {
           lineHeight: 1.5,
           marginBottom: 20,
         }}>
-          Projected (alpha). Your $15 subscription begins when Curators.AI exits alpha. These numbers preview how it would currently allocate.
+          Projected (alpha). Your $15 subscription begins when Curators exits alpha. These numbers preview how it would currently allocate.
         </div>
       )}
 

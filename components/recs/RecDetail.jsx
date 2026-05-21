@@ -9,6 +9,7 @@ import { supabase } from "@/lib/supabase";
 import { T, F, S, MN, CAT, DEFAULT_TIERS, DEFAULT_BUNDLES, LICENSE_TYPES } from "@/lib/constants";
 import { useCurator } from "@/context/CuratorContext";
 import { fetchLinkMetadata } from "@/lib/links/fetchLinkMetadata";
+import { siteUrl } from "@/lib/site-url";
 import LinkDisplay from "@/components/shared/LinkDisplay";
 import ValidationSheet from "@/components/payouts/ValidationSheet";
 import { hasFeature } from "@/lib/features";
@@ -192,7 +193,7 @@ export function CuratorRecDetail({ slug }) {
   const c = CAT[selectedItem.category] || CAT.other;
   const isPublic = selectedItem.visibility === "public";
   const itemSlug = selectedItem.slug || selectedItem.title.toLowerCase().replace(/[^a-z0-9]+/g, "-");
-  const url = `https://curators.ai/${profile.handle.replace("@", "")}/${itemSlug}`;
+  const url = siteUrl(`/${profile.handle.replace("@", "")}/${itemSlug}`);
   const isSubOnly = !!itemSubOnly[selectedItem.id];
   const isInBundle = !!itemInBundle[selectedItem.id];
   const isLicensable = !!itemLicensable[selectedItem.id];
@@ -217,7 +218,7 @@ export function CuratorRecDetail({ slug }) {
   };
 
   const copyLink = (s) => {
-    const copyUrl = `https://curators.ai/${profile.handle.replace("@", "")}/${s}`;
+    const copyUrl = siteUrl(`/${profile.handle.replace("@", "")}/${s}`);
     if (navigator.clipboard) navigator.clipboard.writeText(copyUrl);
     setItemCopied(true);
     setTimeout(() => setItemCopied(false), 2000);
@@ -899,7 +900,7 @@ export function VisitorRecDetail({ slug }) {
 
   const c = CAT[selectedItem.category] || CAT.other;
   const itemSlug = selectedItem.slug || selectedItem.title.toLowerCase().replace(/[^a-z0-9]+/g, "-");
-  const url = `https://curators.ai/${profile.handle.replace("@", "")}/${itemSlug}`;
+  const url = siteUrl(`/${profile.handle.replace("@", "")}/${itemSlug}`);
 
   const isViewerOwner = viewerProfile?.id === profile?.id;
   const canShowValidate = !viewerLoading && !isViewerOwner;

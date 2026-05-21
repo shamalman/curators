@@ -78,7 +78,7 @@ export default function EarningsView() {
         lineHeight: 1.5,
         marginBottom: 20,
       }}>
-        Projected (alpha). Real payouts begin when Curators.AI exits alpha. These numbers reflect how the system would currently allocate.
+        Projected (alpha). Real payouts begin when Curators exits alpha. These numbers reflect how the system would currently allocate.
       </div>
 
       <EarningsHero

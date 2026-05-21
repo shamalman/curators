@@ -99,7 +99,7 @@ TOP PICKS: ${JSON.stringify(topRecs)}`;
       }))
     );
 
-    const prompt = `You are synthesizing a taste profile for a new curator on Curators.AI. You've analyzed their presence across multiple platforms. Here are the results:
+    const prompt = `You are synthesizing a taste profile for a new curator on Curators. You've analyzed their presence across multiple platforms. Here are the results:
 
 ${sourceBlocks}
 
