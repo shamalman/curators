@@ -1,6 +1,6 @@
 # AI Tone Evals
 
-Reusable regression scenarios for Curators.AI prompt-level tone and
+Reusable regression scenarios for Curators prompt-level tone and
 behavior fixes. Every time we change a skill file to fix a tone bug
 or behavior bug, the fix ships with a scenario in this folder.
 

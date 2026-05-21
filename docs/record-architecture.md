@@ -1,6 +1,6 @@
 # Record Architecture
 
-**Curators.AI Reference Document**
+**Curators Reference Document**
 
 **Last updated:** May 3, 2026 (v3: confirmed Reads as first-class Record inputs; regen-policy framework; QCS/inline asymmetry resolved; LENS-001/002/003 resolved; framing reaffirmed for all users regardless of mode)
 
@@ -12,9 +12,9 @@ When this doc and the code disagree, the code is authoritative; this doc gets up
 
 ## What the Record is
 
-Every user on Curators.AI has a Record. The Record is an evolving snapshot of a user's taste, preferences, and perspectives, inferred from their recommendations, confirmations of Reads, the recommendations from others they validate or save, and the curators they directly subscribe to.
+Every user on Curators has a Record. The Record is an evolving snapshot of a user's taste, preferences, and perspectives, inferred from their recommendations, confirmations of Reads, the recommendations from others they validate or save, and the curators they directly subscribe to.
 
-Users on Curators.AI are not strictly curators or subscribers. Many users do both: making recommendations in some domains while seeking recommendations in others. The Record and the user's AI (Lens) serve all users regardless of which mode they spend more time in. When this doc says "user," it means anyone with a Record, which is everyone.
+Users on Curators are not strictly curators or subscribers. Many users do both: making recommendations in some domains while seeking recommendations in others. The Record and the user's AI (Lens) serve all users regardless of which mode they spend more time in. When this doc says "user," it means anyone with a Record, which is everyone.
 
 Where the term "curator" appears, it means a user acting in curation mode (making recommendations, confirming Reads, declaring taste). Where "subscriber" appears, it means a user acting in discovery mode (seeking recommendations, subscribing to curators, validating others' recs). The same person can be both at different moments. The Record and Lens AI accommodate both.
 
@@ -438,7 +438,7 @@ Today, every chip confirmation, refinement, or ignore on a Read fires its own `g
 ## Related docs
 
 - `CLAUDE.md`: engineering practices, including the Taste Profile Pipeline section
-- `curators-ai-roadmap-updated-apr28.md`: product priorities and shipped work
+- `curators-roadmap-updated-apr28.md`: product priorities and shipped work
 - `curators-taste-profile-architecture.md`: the original strategic spec from March 17, 2026 (predates this doc; this doc supersedes its implementation-state claims)
 - `lib/taste-profile/generate.js`: the generation pipeline (authoritative for prompt and behavior)
 - `app/api/generate-taste-profile/route.js`: the regen endpoint (authoritative for auth model)

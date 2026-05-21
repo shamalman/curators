@@ -38,7 +38,7 @@ Progress log for the staged payouts rollout. CLAUDE.md carries the canonical sho
 - Helper: `lib/email/sendValidationReceivedEmail.js`. Mirrors `sendNewSubscriberEmail.js` shape exactly (imports `{ resend }` from `@/lib/resend`, positional `generateEmailToken(profileId, action, payload)`, writes `notification_log`, never throws, returns `{ ok, sent | skipped, error?, detail? }`).
 - Template: `validationReceivedEmail` in `lib/email-templates.js`. Uses existing `emailShell({ title, preheader, innerHtml })` + `emailFooter` design system. Subject locked to `@{subscriberHandle} said this landed`.
 - Curator email sourced via `supabase.auth.admin.getUserById(auth_user_id)`. The `profiles.email` column does not exist; do not attempt to read it.
-- Reply CTA URL: `https://curators.ai/{curatorHandle}/{recSlug}`. The codebase has no `/recs/[id]` route; rec URLs are `/<handle>/<slug>` (`app/[handle]/[slug]/page.js`). Forward-compat to `/subs?segment=messages&thread={id}` deferred to Thread 4.
+- Reply CTA URL: `https://curators.com/{curatorHandle}/{recSlug}`. The codebase has no `/recs/[id]` route; rec URLs are `/<handle>/<slug>` (`app/[handle]/[slug]/page.js`). Forward-compat to `/subs?segment=messages&thread={id}` deferred to Thread 4.
 
 **Feature flags introduced**:
 - `payout_threads` — subscriber-side, gates thread substrate writes from the validation flow AND the `/api/threads/[threadId]/messages` reply endpoint.

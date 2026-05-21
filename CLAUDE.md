@@ -1,4 +1,4 @@
-# CLAUDE.md — Curators.AI Engineering Guide
+# CLAUDE.md — Curators Engineering Guide
 
 Operating manual for Claude Code in this repo. Loaded every session, so it stays lean. Architecture details live in `docs/` — referenced inline below.
 
@@ -46,7 +46,7 @@ User-facing surfaces use new framing. Code, schema, and logs use legacy names. *
 3. **No silent `catch {}`.** Surface errors with a `[FEATURE_ERROR]` log marker.
 4. **No Supabase join aliases.** Use two-step queries.
 5. **After new DB columns/tables:** run `NOTIFY pgrst, 'reload schema';` in Supabase SQL Editor. PostgREST silently drops unknown columns without this.
-6. **No em dashes** in AI skill files, prompt text, AI output, or any user-facing copy across Curators.AI. No spaced hyphens as substitutes either. Models will slip `**Header** —` connectors; check generated output.
+6. **No em dashes** in AI skill files, prompt text, AI output, or any user-facing copy across Curators. No spaced hyphens as substitutes either. Models will slip `**Header** —` connectors; check generated output.
 7. **Verify column existence** before writing queries against unfamiliar tables. See `docs/schema.md`.
 8. **Add RLS policies** for new write operations.
 9. **Deploy one change at a time.** Each deploy independently testable on iPhone Safari.
@@ -274,7 +274,7 @@ Full schema with column types: `docs/schema.md`. Rec files migration: `docs/rec-
 
 ## Tooling
 
-**Supabase MCP** (Claude Code only, read-only): scoped to `curators-ai`. Use for pre-implementation recon. **Do NOT** paste untrusted content with MCP active — prompt injection risk. For writes, use Supabase SQL Editor.
+**Supabase MCP** (Claude Code only, read-only): scoped to `curators`. Use for pre-implementation recon. **Do NOT** paste untrusted content with MCP active — prompt injection risk. For writes, use Supabase SQL Editor.
 
 **FK-safe test account deletion order:** `notification_log` → `email_tokens` → `feedback` → `saved_recs` → `agent_jobs` → `subscribers` → `subscriptions` → `chat_messages` → `recommendations` → `invite_codes` (UPDATE before DELETE) → `profiles`. Auth users deleted manually.
 

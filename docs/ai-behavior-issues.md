@@ -1,6 +1,6 @@
 # AI Behavior Issues
 
-Running inventory of AI behavior bugs, refinements, and optimization targets for Curators.AI. Append-only. Mark resolved items with the deploy that fixed them and move them to the Resolved section at the bottom.
+Running inventory of AI behavior bugs, refinements, and optimization targets for Curators. Append-only. Mark resolved items with the deploy that fixed them and move them to the Resolved section at the bottom.
 
 This file is the persistent layer for AI behavior work. Individual fixes happen in their own focused threads — this file is what every new thread reads to know what's outstanding.
 
@@ -76,7 +76,7 @@ Not AI behavior bugs strictly — these are code references to DB tables or colu
 
 **Observed:** May 9, 2026. Tester transcript on @ianr. After capturing a music save, Lens pivoted to "anywhere you've eaten lately that stuck" with no signal from the curator. Category coverage took priority over following the curator's named subject.
 
-**Root cause:** Talk-through branch in charter.md required "ask one genuine question that helps them articulate" but did not explicitly forbid changing categories. Legacy curators-ai-system-prompt.md framing around cross-category triangulation likely pulled against the Charter. Soft instruction lost to dense priors.
+**Root cause:** Talk-through branch in charter.md required "ask one genuine question that helps them articulate" but did not explicitly forbid changing categories. Legacy curators-system-prompt.md framing around cross-category triangulation likely pulled against the Charter. Soft instruction lost to dense priors.
 
 **Priority:** P0 at observation. Tester-visible Charter violations affecting trust.
 

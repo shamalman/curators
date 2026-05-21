@@ -1,6 +1,6 @@
 # Payouts System
 
-Phase A substrate for the Curators.AI payouts model. Covers the validation flow, threads/messages substrate, the allocation calculator and earnings surface, feature flag inventory, and pending follow-ups. Production-staged behind `is_tester=true` plus per-feature flags on `@shamal`, `@chris`, and `@testmctesty` as of May 2026.
+Phase A substrate for the Curators payouts model. Covers the validation flow, threads/messages substrate, the allocation calculator and earnings surface, feature flag inventory, and pending follow-ups. Production-staged behind `is_tester=true` plus per-feature flags on `@shamal`, `@chris`, and `@testmctesty` as of May 2026.
 
 Source of truth for table shapes: `docs/schema.md`. Source of truth for column types and RLS policies: the migration files in `migrations/`.
 
@@ -92,7 +92,7 @@ All set manually via SQL on `profiles.feature_flags` (jsonb).
 
 ## Deliverability notes
 
-Validation-received email landed in Gmail Primary tab on 2026-05-11 during Thread 7 close-out. Sender: `notifications@curators.ai`. List-Unsubscribe header present (one-click). No mitigations required.
+Validation-received email landed in Gmail Primary tab on 2026-05-11 during Thread 7 close-out. Sender: `notifications@curators.com`. List-Unsubscribe header present (one-click). No mitigations required.
 
 ## Pending (Thread 8+)
 

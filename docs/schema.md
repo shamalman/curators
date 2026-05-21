@@ -1,4 +1,4 @@
-# Curators.AI — Database Schema
+# Curators — Database Schema
 Last full audit: 2026-04-10. taste_reads and taste_read_ignores added 2026-04-14. Last column drop: 2026-04-15 (style_summary). Source of truth: `information_schema.columns`.
 To refresh: run `SELECT table_name, column_name, data_type, is_nullable FROM information_schema.columns WHERE table_schema = 'public' ORDER BY table_name, ordinal_position;` in Supabase SQL Editor.
 

@@ -84,7 +84,7 @@ Screenshot upload failures NEVER block feedback submission. Text persists, email
 ## Email infrastructure
 
 - **Provider:** Resend
-- **From address:** `notifications@curators.ai`
+- **From address:** `notifications@curators.com`
 - **Reply-to:** varies by template (curator's address for some, support for others)
 - **Subject line patterns:** templated, includes curator handle + rec title where applicable
 - **Plaintext fallback:** every template includes both HTML and plaintext versions
