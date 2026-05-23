@@ -10,6 +10,7 @@ const PUBLIC_ROUTES = new Set([
   '/reset-password',
   '/email/saved',
   '/email/unsubscribed',
+  '/pricing',
 ]);
 
 // Unauthenticated /api/* allowlist (enforced by route handlers, not middleware):
