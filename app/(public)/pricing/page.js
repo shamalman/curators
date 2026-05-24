@@ -151,7 +151,6 @@ export default function PricingPage() {
                   'Receive recommendations by email, instant or digest',
                   'Browse curator profiles and recommendations',
                   'Donate to curators or to specific recommendations',
-                  'Save recommendations to a personal reading list',
                 ]}
                 checkColor={T.ink}
                 ctaLabel="Get started"
@@ -165,11 +164,13 @@ export default function PricingPage() {
                 description="For making recommendations and joining the network's economy."
                 introLine="Everything in Free, plus:"
                 features={[
+                  'Save recommendations to a personal reading list',
                   'Make recommendations of your own',
-                  'Cosign and comment on recommendations you stand behind',
+                  'Cosign and comment on recommendations that moved you',
+                  'Your Record: a living portrait of your perspective, built from your recommendations, cosigns, and saves, shared with the people and agents you choose',
                   'A portion of your $5 flows to the curators you cosign',
-                  'Earn from cosigns, saves, and subscriptions to your recommendations',
-                  'Set pricing and access on what you publish',
+                  'Earn from cosigns, saves, and subscriptions to your own recommendations',
+                  'Set pricing and access on your published recommendations',
                   'Public profile at curators.com/your-handle',
                   'Searchable recommendation archive',
                   'Export your data anytime',
@@ -183,11 +184,11 @@ export default function PricingPage() {
                 name="Seat"
                 price="$15/month"
                 annual="or $144/year (save 20%)"
-                description="For curators and subscribers who want a Lens working alongside them."
-                introLine="Everything in Supporter, plus your personal Lens:"
+                description="For more automation and intelligence for your curation needs."
+                introLine="Everything in Supporter, plus:"
                 features={[
-                  "The Find query: Ask Lens for a recommendation from your network you'll genuinely love right now. It declines rather than surface something mediocre.",
-                  'The Read: Submit any link, article, album, or playlist. Lens reads it through your Record and tells you how it fits.',
+                  "A personal Lens that helps you find what you'll love, make recommendations, and keep you up to date",
+                  'The Read: Submit any link, article, music, video, or podcast. Lens reads it through your Record and tells you how it fits.',
                   "Catalog import: Connect Spotify, Letterboxd, Goodreads, and more. Lens reads what you've loved and helps build your Record with you.",
                   "Recommendation watch: Background agents track news, releases, and events around the things you've recommended or saved.",
                   "A visitor Lens on your public profile, so people can explore your perspective when you're not there",
