@@ -166,7 +166,7 @@ export default function PricingPage() {
                 features={[
                   'Save recommendations to a personal reading list',
                   'Make recommendations of your own',
-                  'Public profile at curators.com/your-handle',
+                  'Public profile you can customize at curators.com/your-handle',
                   'Cosign and comment on recommendations that moved you',
                   'Your Record: a living portrait of your perspective built from your cosigns, saves, and recommendations, shared with people and agents you choose',
                   'A portion of your $5 flows to the curators you cosign',
@@ -189,10 +189,10 @@ export default function PricingPage() {
                   "A personal Lens that helps you make recommendations, find what you'll love, and keep you up to date",
                   'The Read: Submit any link, article, music, video, or podcast. Lens analyzes it through your Record and tells you how it fits.',
                   "A visitor Lens on your public profile, so people can explore your perspective when you're not there",
-                  "Catalog import: Connect Spotify, Letterboxd, Goodreads, and more. Lens reads what you've loved and helps build your Record with you.",
-                  "Recommendation watch: Background agents track news, releases, and events around the things you've recommended or saved.",
                   'Direct messages and paid requests',
+                  "Recommendation watch: Background agents track news, releases, and events around the things you've recommended or saved.",
                   'Recommendation analytics',
+                  "Catalog import: Connect Spotify, Letterboxd, Goodreads, and more. Lens reads what you've loved and helps build your Record with you.",
                 ]}
                 checkColor={COPPER}
                 ctaLabel="Start Seat"
