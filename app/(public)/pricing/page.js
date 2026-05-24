@@ -65,7 +65,7 @@ export default function PricingPage() {
               maxWidth: 840,
               letterSpacing: '-0.01em',
             }}>
-              A network of people you trust, recommending the things they love.
+              Curators you trust, recommending things they love.
             </h1>
 
             <p style={{
@@ -140,7 +140,7 @@ export default function PricingPage() {
                 name="Free"
                 price="$0"
                 annual={null}
-                description="For receiving recommendations from curators you trust."
+                description="View and receive recommendations from curators you trust."
                 introLine={null}
                 features={[
                   'Subscribe to any curator on the network',
@@ -157,7 +157,7 @@ export default function PricingPage() {
                 name="Supporter"
                 price="$5/month"
                 annual="or $48/year (save 20%)"
-                description="For making recommendations and joining the network's economy."
+                description="Make recommendations and join the network's economy."
                 introLine="Everything in Free, plus:"
                 features={[
                   'Save recommendations to a personal reading list',
@@ -179,7 +179,7 @@ export default function PricingPage() {
                 name="Seat"
                 price="$15/month"
                 annual="or $144/year (save 20%)"
-                description="For more automation and intelligence for your curation needs."
+                description="More automation and intelligence tools for your curation needs."
                 introLine="Everything in Supporter, plus:"
                 features={[
                   "A personal Lens that helps you make recommendations, find what you'll love, and keep you up to date",
