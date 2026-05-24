@@ -150,7 +150,7 @@ export default function PricingPage() {
                   'Subscribe to any curator on the network',
                   'Receive recommendations by email, instant or digest',
                   'Browse curator profiles and recommendations',
-                  'Donate to curators or to specific recommendations',
+                  'Financially support curators directly',
                 ]}
                 checkColor={T.ink}
                 ctaLabel="Get started"
@@ -166,13 +166,12 @@ export default function PricingPage() {
                 features={[
                   'Save recommendations to a personal reading list',
                   'Make recommendations of your own',
+                  'Public profile at curators.com/your-handle',
                   'Cosign and comment on recommendations that moved you',
-                  'Your Record: a living portrait of your perspective, built from your recommendations, cosigns, and saves, shared with the people and agents you choose',
+                  'Your Record: a living portrait of your perspective built from your cosigns, saves, and recommendations, shared with people and agents you choose',
                   'A portion of your $5 flows to the curators you cosign',
                   'Earn from cosigns, saves, and subscriptions to your own recommendations',
                   'Set pricing and access on your published recommendations',
-                  'Public profile at curators.com/your-handle',
-                  'Searchable recommendation archive',
                   'Export your data anytime',
                 ]}
                 checkColor={COPPER}
@@ -187,13 +186,12 @@ export default function PricingPage() {
                 description="For more automation and intelligence for your curation needs."
                 introLine="Everything in Supporter, plus:"
                 features={[
-                  "A personal Lens that helps you find what you'll love, make recommendations, and keep you up to date",
-                  'The Read: Submit any link, article, music, video, or podcast. Lens reads it through your Record and tells you how it fits.',
+                  "A personal Lens that helps you make recommendations, find what you'll love, and keep you up to date",
+                  'The Read: Submit any link, article, music, video, or podcast. Lens analyzes it through your Record and tells you how it fits.',
+                  "A visitor Lens on your public profile, so people can explore your perspective when you're not there",
                   "Catalog import: Connect Spotify, Letterboxd, Goodreads, and more. Lens reads what you've loved and helps build your Record with you.",
                   "Recommendation watch: Background agents track news, releases, and events around the things you've recommended or saved.",
-                  "A visitor Lens on your public profile, so people can explore your perspective when you're not there",
                   'Direct messages and paid requests',
-                  'Priority parsing for paywalled sources',
                   'Recommendation analytics',
                 ]}
                 checkColor={COPPER}
