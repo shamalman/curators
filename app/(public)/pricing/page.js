@@ -65,7 +65,7 @@ export default function PricingPage() {
               maxWidth: 840,
               letterSpacing: '-0.01em',
             }}>
-              A network of people you trust, recommending the things they stand behind.
+              A network of people you trust, recommending the things they love.
             </h1>
 
             <p style={{
@@ -77,7 +77,7 @@ export default function PricingPage() {
               margin: '0 0 28px',
               maxWidth: 720,
             }}>
-              Curators is a place to receive recommendations from people whose taste you trust, and to make your own recommendations to the people who trust you. Everyone has a Lens, a personal AI that helps you capture your recommendations, understand your perspective, and find what you&apos;ll love from the people you subscribe to.
+              Curators is for people who want to share and learn from trusted perspectives. There&apos;s a rich world of life, art, and information beyond the grasp of AI and outside our algorithmic orbits. We&apos;re building a place where you can curate what the algorithms miss, find your people, and earn from your perspective.
             </p>
 
             <p style={{
@@ -89,7 +89,7 @@ export default function PricingPage() {
               margin: 0,
               maxWidth: 720,
             }}>
-              Receiving recommendations is always free. Making them and earning from them happens on a paid tier.
+              Reading and receiving recommendations is always free. Making recommendations and earning from them is part of the Supporter tier. The Seat tier includes direct messaging, curator requests, and your Lens, a personal intelligence that represents your perspective and automates your curation.
             </p>
           </section>
 
@@ -110,19 +110,15 @@ export default function PricingPage() {
             <div style={{ display: 'grid', gap: 56, maxWidth: 760 }}>
               <ValueBlock
                 name="Honesty"
-                body="Most recommendation systems are built to keep you scrolling. Curators is built to tell you the truth. Your Lens will decline rather than surface something mediocre. It will tell you when it doesn't know enough yet. It will never fabricate a recommendation in your voice or anyone else's."
+                body="Most recommendation systems are built to keep you scrolling. Curators is built to tell you the truth. Your Lens declines rather than surface something mediocre. It tells you when it doesn't know enough yet. It will never fabricate or paraphrase a recommendation in your voice or anyone else's."
               />
               <ValueBlock
                 name="Fellowship"
                 body="When you subscribe, a portion of your subscription flows directly to the curators whose recommendations you cosign. When others cosign yours, you earn. No advertising, no algorithmic middleman taking a cut of attention. Money moves from the people who appreciate a recommendation to the person who made it."
               />
               <ValueBlock
-                name="Voice"
-                body="Your recommendations stay in your words. We don't paraphrase you, rewrite you, or generate recommendations on your behalf. Your Lens reads what you've recommended to understand your perspective. What gets published is what you wrote."
-              />
-              <ValueBlock
                 name="Ownership"
-                body="You can export your Record, your recommendations, and your subscriber list at any time. If you leave, you take everything with you. We're an instrument for your curation, not a landlord of it."
+                body="You own all your data. You can export your Record, your recommendations, and your subscriber list at any time. If you leave, you take everything with you. We're an instrument for your curation, not a landlord of it."
               />
             </div>
           </section>
