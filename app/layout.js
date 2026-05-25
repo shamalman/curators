@@ -2,8 +2,30 @@
 import './globals.css'
 
 export const metadata = {
+  metadataBase: new URL('https://curators.com'),
   title: 'Curators',
   description: 'Curate your world, find great recommendations, and earn from your perspective.',
+  openGraph: {
+    title: 'Curators',
+    description: 'Curate your world, find great recommendations, and earn from your perspective.',
+    url: 'https://curators.com',
+    siteName: 'Curators',
+    type: 'website',
+    images: [
+      {
+        url: '/og-image.png',
+        width: 1200,
+        height: 630,
+        alt: 'Curators',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Curators',
+    description: 'Curate your world, find great recommendations, and earn from your perspective.',
+    images: ['/og-image.png'],
+  },
   robots: {
     index: false,
     follow: false,
