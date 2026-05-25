@@ -3,7 +3,7 @@ import './globals.css'
 
 export const metadata = {
   title: 'Curators',
-  description: 'Your personal AI for recommendations',
+  description: 'Curate your world, find great recommendations, and earn from your perspective.',
   robots: {
     index: false,
     follow: false,
