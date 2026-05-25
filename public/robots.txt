@@ -1,0 +1,22 @@
+# Block general search engines (alpha stage, not ready for indexing)
+User-agent: *
+Disallow: /
+
+# Allow social media link preview crawlers
+User-agent: Twitterbot
+Allow: /
+
+User-agent: facebookexternalhit
+Allow: /
+
+User-agent: LinkedInBot
+Allow: /
+
+User-agent: Slackbot
+Allow: /
+
+User-agent: WhatsApp
+Allow: /
+
+User-agent: Applebot
+Allow: /
