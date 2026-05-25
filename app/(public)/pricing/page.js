@@ -5,7 +5,7 @@ const COPPER = '#D4956B'
 
 export const metadata = {
   title: 'Pricing | Curators',
-  description: 'A network of people you trust, recommending the things they stand behind.',
+  description: 'Curate your world, find great recommendations, and earn from your perspective.',
 }
 
 export default function PricingPage() {
