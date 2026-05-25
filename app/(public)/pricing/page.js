@@ -65,7 +65,7 @@ export default function PricingPage() {
               maxWidth: 840,
               letterSpacing: '-0.01em',
             }}>
-              Curators you trust, recommending things they love.
+              Curators you trust, recommending the things they love.
             </h1>
 
             <p style={{
@@ -77,7 +77,7 @@ export default function PricingPage() {
               margin: '0 0 28px',
               maxWidth: 720,
             }}>
-              Curators is for people who want to share and learn from trusted perspectives. There&apos;s a rich world of life, art, and information beyond the grasp of AI and outside our algorithmic orbits. We&apos;re building a place where you can curate what the algorithms miss, find your people, and earn from your perspective.
+              Curators is for people who want to share and learn from trusted perspectives. We&apos;re building a place where you can curate your world, find your people, and earn from your perspective. There&apos;s a vital world of life, art, and information beyond the grasp of AI and outside our algorithmic orbits. We&apos;ll meet you there on Curators.
             </p>
 
             <p style={{
@@ -89,7 +89,7 @@ export default function PricingPage() {
               margin: 0,
               maxWidth: 720,
             }}>
-              Reading and receiving recommendations is always free. Making recommendations and earning from them is part of the Supporter tier. The Seat tier includes direct messaging, curator requests, and your Lens, a personal intelligence that represents your perspective and automates your curation.
+              Reading and receiving recommendations is always free. Making recommendations and earning from them is part of the Supporter tier, which builds your Record, a living portrait of your perspective from what you curate. The Seat tier includes direct messaging, paid curation requests, and your Lens, a personal intelligence that uses your Record to represent you and automate your curation.
             </p>
           </section>
 
