@@ -27,6 +27,16 @@ html, body, #__next {
     max-width: 100vw;
     overscroll-behavior: none;
   }
+
+  html:has([data-public-route]),
+  html:has([data-public-route]) body,
+  html:has([data-public-route]) #__next {
+    overflow: visible;
+    position: static;
+    inset: auto;
+    height: auto;
+    overscroll-behavior: auto;
+  }
   * {
     overflow-wrap: break-word;
     word-break: break-word;
