@@ -1068,21 +1068,32 @@ Keep it conversational. Ask one useful question at a time. Do not use em dashes.
             <div style={{ maxWidth: 700, margin: "0 auto", padding: "12px 16px" }}>
             <ErrorBoundary>
             {showLensCanvas && (
-              <div style={{ minHeight: isDesktop ? "calc(100vh - 300px)" : "calc(100vh - 250px)", display: "flex", flexDirection: "column", justifyContent: "flex-end", padding: isDesktop ? "72px 0 30px" : "44px 0 24px" }}>
-                <div style={{ marginBottom: isDesktop ? 34 : 26 }}>
-                  <div style={{ fontFamily: S, fontSize: isDesktop ? 30 : 26, color: T.ink, lineHeight: 1.1, marginBottom: 10 }}>What would you like to do?</div>
-                  <div style={{ fontFamily: F, fontSize: 14, color: T.ink3, lineHeight: 1.5, maxWidth: 430 }}>Start a recommendation, shape an idea, or revisit your Record.</div>
-                </div>
-                <div style={{ display: "grid", gap: 14, width: "100%", maxWidth: 430 }}>
-                  <button onClick={() => setSheetOpen(true)} style={{ width: "100%", textAlign: "left", border: `1px solid ${T.acc}`, background: T.acc, color: T.accText, borderRadius: 14, padding: "15px 16px", fontFamily: F, fontSize: 14, fontWeight: 700, cursor: "pointer" }}>+ Recommendation</button>
-                  <button onClick={startRecommendationCoaching} style={{ width: "100%", textAlign: "left", border: `1px solid ${W.bdr}`, background: W.s, color: T.ink2, borderRadius: 14, padding: "15px 16px", fontFamily: F, fontSize: 14, cursor: "pointer" }}>Help me write a Recommendation</button>
-                  <button onClick={() => router.push('/me/taste')} style={{ width: "100%", textAlign: "left", border: `1px solid ${W.bdr}`, background: W.s, color: T.ink2, borderRadius: 14, padding: "15px 16px", fontFamily: F, fontSize: 14, cursor: "pointer" }}>Review my Record</button>
-                  <div style={{ paddingTop: 2 }}>
-                    <FeedbackChip
-                      visible={!feedbackSheetOpen}
-                      onTap={() => setFeedbackSheetOpen(true)}
-                    />
-                  </div>
+              <div style={{ minHeight: isDesktop ? "calc(100vh - 285px)" : "calc(100vh - 245px)", display: "flex", flexDirection: "column", justifyContent: "flex-end", padding: isDesktop ? "72px 0 18px" : "44px 0 14px" }}>
+                <div style={{ display: "grid", gap: isDesktop ? 22 : 18, width: "100%", maxWidth: 430, paddingBottom: isDesktop ? 16 : 10 }}>
+                  <button onClick={() => setSheetOpen(true)} style={{ width: "100%", textAlign: "left", border: "none", background: "transparent", color: T.ink, padding: 0, fontFamily: F, fontSize: isDesktop ? 20 : 18, cursor: "pointer", display: "flex", alignItems: "center", gap: 18 }}>
+                    <span style={{ width: 30, height: 30, color: T.acc, display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M12 5v14" /><path d="M5 12h14" /></svg>
+                    </span>
+                    <span>Recommendation</span>
+                  </button>
+                  <button onClick={startRecommendationCoaching} style={{ width: "100%", textAlign: "left", border: "none", background: "transparent", color: T.ink, padding: 0, fontFamily: F, fontSize: isDesktop ? 20 : 18, cursor: "pointer", display: "flex", alignItems: "center", gap: 18 }}>
+                    <span style={{ width: 30, height: 30, color: T.ink2, display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
+                    </span>
+                    <span>Help me write a Recommendation</span>
+                  </button>
+                  <button onClick={() => router.push('/me/taste')} style={{ width: "100%", textAlign: "left", border: "none", background: "transparent", color: T.ink, padding: 0, fontFamily: F, fontSize: isDesktop ? 20 : 18, cursor: "pointer", display: "flex", alignItems: "center", gap: 18 }}>
+                    <span style={{ width: 30, height: 30, color: T.ink2, display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5V5a2 2 0 0 1 2-2h12v18H6a2 2 0 0 1-2-1.5Z" /><path d="M8 7h6" /><path d="M8 11h5" /></svg>
+                    </span>
+                    <span>Review my Record</span>
+                  </button>
+                  <button onClick={() => setFeedbackSheetOpen(true)} style={{ width: "100%", textAlign: "left", border: "none", background: "transparent", color: T.ink2, padding: 0, fontFamily: F, fontSize: isDesktop ? 18 : 16, cursor: "pointer", display: feedbackSheetOpen ? "none" : "flex", alignItems: "center", gap: 18 }}>
+                    <span style={{ width: 30, height: 30, color: T.ink2, display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z" /></svg>
+                    </span>
+                    <span>Give feedback</span>
+                  </button>
                 </div>
               </div>
             )}
