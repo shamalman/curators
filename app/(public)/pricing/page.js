@@ -65,7 +65,7 @@ export default function PricingPage() {
               maxWidth: 840,
               letterSpacing: '-0.01em',
             }}>
-              Curators you trust, recommending the things they love.
+              Curators you trust, recommending things they love.
             </h1>
 
             <p style={{
