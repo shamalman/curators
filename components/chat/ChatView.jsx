@@ -1054,13 +1054,19 @@ If you cannot produce a clean 2-sentence response that satisfies all constraints
             <div style={{ maxWidth: 700, margin: "0 auto", padding: "12px 16px" }}>
             <ErrorBoundary>
             {showLensCanvas && (
-              <div style={{ minHeight: 220, display: "flex", flexDirection: "column", justifyContent: "flex-end", padding: "28px 0 18px" }}>
-                <div style={{ fontFamily: S, fontSize: isDesktop ? 30 : 26, color: T.ink, lineHeight: 1.1, marginBottom: 10 }}>What do you want to work on?</div>
-                <div style={{ fontFamily: F, fontSize: 14, color: T.ink3, lineHeight: 1.5, marginBottom: 18 }}>Start fresh, or reopen an older conversation from History.</div>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                  <button onClick={() => setSheetOpen(true)} style={{ border: `1px solid ${T.acc}`, background: T.acc, color: T.accText, borderRadius: 999, padding: "9px 13px", fontFamily: F, fontSize: 13, fontWeight: 650, cursor: "pointer" }}>+ Recommendation</button>
-                  <button onClick={() => prefillLensPrompt("What have I been into lately?")} style={{ border: `1px solid ${W.bdr}`, background: W.s, color: T.ink2, borderRadius: 999, padding: "9px 13px", fontFamily: F, fontSize: 13, cursor: "pointer" }}>What have I been into lately?</button>
-                  <button onClick={() => router.push('/me/taste')} style={{ border: `1px solid ${W.bdr}`, background: W.s, color: T.ink2, borderRadius: 999, padding: "9px 13px", fontFamily: F, fontSize: 13, cursor: "pointer" }}>Review my Record</button>
+              <div style={{ minHeight: isDesktop ? 360 : 300, display: "flex", flexDirection: "column", justifyContent: "center", padding: "24px 0 18px" }}>
+                <div style={{ fontFamily: S, fontSize: isDesktop ? 30 : 26, color: T.ink, lineHeight: 1.1, marginBottom: 10 }}>What would you like to do?</div>
+                <div style={{ fontFamily: F, fontSize: 14, color: T.ink3, lineHeight: 1.5, marginBottom: 18, maxWidth: 430 }}>Start a recommendation, shape an idea, or revisit your Record.</div>
+                <div style={{ display: "grid", gap: 8, width: "100%", maxWidth: 430 }}>
+                  <button onClick={() => setSheetOpen(true)} style={{ width: "100%", textAlign: "left", border: `1px solid ${T.acc}`, background: T.acc, color: T.accText, borderRadius: 14, padding: "13px 15px", fontFamily: F, fontSize: 14, fontWeight: 700, cursor: "pointer" }}>+ Recommendation</button>
+                  <button onClick={() => prefillLensPrompt("I want to talk through a recommendation before I save it")} style={{ width: "100%", textAlign: "left", border: `1px solid ${W.bdr}`, background: W.s, color: T.ink2, borderRadius: 14, padding: "13px 15px", fontFamily: F, fontSize: 14, cursor: "pointer" }}>Help me write a Recommendation</button>
+                  <button onClick={() => router.push('/me/taste')} style={{ width: "100%", textAlign: "left", border: `1px solid ${W.bdr}`, background: W.s, color: T.ink2, borderRadius: 14, padding: "13px 15px", fontFamily: F, fontSize: 14, cursor: "pointer" }}>Review my Record</button>
+                  <div style={{ paddingTop: 4 }}>
+                    <FeedbackChip
+                      visible={!feedbackSheetOpen}
+                      onTap={() => setFeedbackSheetOpen(true)}
+                    />
+                  </div>
                 </div>
               </div>
             )}
@@ -1444,7 +1450,7 @@ If you cannot produce a clean 2-sentence response that satisfies all constraints
                 onTap={() => setSheetOpen(true)}
               />
               <FeedbackChip
-                visible={input.length === 0 && !sheetOpen && !feedbackSheetOpen && !pendingImage}
+                visible={!showLensCanvas && input.length === 0 && !sheetOpen && !feedbackSheetOpen && !pendingImage}
                 onTap={() => setFeedbackSheetOpen(true)}
               />
             </div>
