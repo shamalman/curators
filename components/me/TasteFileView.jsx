@@ -147,34 +147,40 @@ export default function TasteFileView() {
   const sections = parseTasteProfile(profileData.content)
   if (!sections) return null
 
-  const formattedDate = profileData.generated_at
-    ? new Date(profileData.generated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-    : null
+  const thesis = sections['Working Interpretation']
+  const hasThesis = thesis && thesis !== 'Building...'
+
+  // Compact stats strip: version first, "Last updated" last, the rest between.
+  const statItems = []
+  if (profileData.version) statItems.push(`v${profileData.version}`)
+  if (sections['Stats']) {
+    const statLines = sections['Stats']
+      .split('\n')
+      .map(l => l.replace(/^-\s*/, '').trim())
+      .filter(Boolean)
+    const updated = statLines.filter(l => /^Last updated:/i.test(l))
+    const rest = statLines.filter(l => !/^Last updated:/i.test(l))
+    statItems.push(...rest, ...updated)
+  }
 
   return (
     <div style={{ paddingBottom: 40 }}>
-      {/* Title */}
-      <div style={{ fontFamily: S, fontSize: 22, fontWeight: 500, color: T.ink, marginBottom: 4 }}>
-        Record: @{(profile?.handle || '').replace(/^@/, '')}
-      </div>
-
-      {/* Meta */}
-      {(profileData.version || formattedDate) && (
-        <div style={{ fontFamily: MN, fontSize: 11, color: T.ink3, marginBottom: 24 }}>
-          {profileData.version ? `v${profileData.version}` : ''}
-          {profileData.version && formattedDate ? ' \u00B7 ' : ''}
-          {formattedDate ? `updated ${formattedDate}` : ''}
-        </div>
+      {/* Working Interpretation is the lede. No label: the Thesis IS the headline. */}
+      {hasThesis ? (
+        <p style={{ fontFamily: S, fontSize: 18, fontWeight: 400, color: T.ink, lineHeight: 1.5, marginTop: 0, marginBottom: 24 }}>
+          {thesis}
+        </p>
+      ) : (
+        <p style={{ fontFamily: F, fontSize: 14, color: T.ink3, fontStyle: 'italic', marginTop: 0, marginBottom: 24 }}>
+          Your Record is still taking shape. Make a few recommendations or confirm some Reads and an interpretation will appear here.
+        </p>
       )}
 
-      {/* Thesis */}
-      {sections['Thesis'] && (
-        <>
-          <SectionHeader>Thesis</SectionHeader>
-          <p style={{ fontSize: 14, lineHeight: 1.6, color: T.ink, fontFamily: F, margin: 0 }}>
-            {sections['Thesis']}
-          </p>
-        </>
+      {/* Stats strip */}
+      {statItems.length > 0 && (
+        <div style={{ fontFamily: MN, fontSize: 11, color: T.ink3, marginBottom: 32 }}>
+          {statItems.join(' \u00B7 ')}
+        </div>
       )}
 
       {/* Domains */}
@@ -284,18 +290,6 @@ export default function TasteFileView() {
               </div>
             </div>
           ))}
-        </>
-      )}
-
-      {/* Stats */}
-      {sections['Stats'] && (
-        <>
-          <SectionHeader>Stats</SectionHeader>
-          <div style={{ fontFamily: MN, fontSize: 11, color: T.ink3, lineHeight: 1.8 }}>
-            {sections['Stats'].split('\n').filter(l => l.trim()).map((line, i) => (
-              <div key={i}>{line.replace(/^-\s*/, '')}</div>
-            ))}
-          </div>
         </>
       )}
 
