@@ -4,23 +4,30 @@ Coordination rules for agents working on this repo. Going forward, Codex may own
 
 The full engineering operating manual lives in `CLAUDE.md` (tech stack, architecture quick reference, vocabulary, key file paths, schema references). This file governs how multiple agents coexist; `CLAUDE.md` governs how the code works.
 
-Last reviewed: May 25, 2026.
+Last reviewed: May 26, 2026.
 
 ---
 
 ## Coordination Rules
 
-1. **Always pull before starting work:**
+1. **Session start checklist (run before any other action):**
    ```bash
    git checkout main
    git pull --ff-only
    ```
+   Then:
+   - Read `AGENTS.md` (this file) for current ownership claims and rules.
+   - If the task touches any file listed under "Project Ownership" as reserved by another agent, stop and flag the overlap with Shamal before proceeding.
+   - If working on a feature branch, rebase it onto fresh main before continuing: `git rebase main`.
+
+   Skipping this step causes branch divergence and merge conflicts when multiple agents work in parallel.
 2. **Use branches for larger work.** Do not make major architecture changes directly on `main`.
 3. **Push branches early** so the other agent can inspect or continue.
 4. **Do not edit files another agent is actively working on** unless ownership is explicitly handed off.
 5. **For DB changes:** write the exact SQL, update `docs/schema.md`, and after new Supabase columns/tables run `NOTIFY pgrst, 'reload schema';` in the Supabase SQL Editor.
 6. **Update architecture docs when behavior changes** (`docs/chat-route.md`, `docs/schema.md`, or new docs as needed).
 7. **Before implementing from stale context, inspect the current files in the repo.**
+8. **Delete feature branches after merge.** Once a feature branch is merged to main (via PR or direct merge), delete it locally and on origin: `git branch -D <branch>` and `git push origin --delete <branch>`. Stale branches confuse ownership and clutter the repo.
 
 ---
 
