@@ -5,8 +5,22 @@ import { supabase } from "../lib/supabase";
 import { VisitorContext } from "./VisitorContext";
 import { ingestUrlCapture } from "../lib/rec-files/ingest.js";
 import { extractImageUrl } from "../lib/agent/parsers/extract-image.js";
+import { hasFeature } from "../lib/features.js";
 
 export const CuratorContext = createContext(null);
+
+const LENS_ACTIVE_WINDOW_MS = 6 * 60 * 60 * 1000;
+
+const mapChatMessage = (m) => ({
+  id: m.id,
+  role: m.role === "assistant" ? "ai" : m.role,
+  text: m.text,
+  capturedRec: m.captured_rec,
+  blocks: m.blocks || null,
+  interactions: m.interactions || [],
+  parsed_content: m.parsed_content || null,
+  image_rec_candidate: m.meta?.imageRecCandidate || null,
+});
 
 export function CuratorProvider({ children }) {
   const [profile, setProfile] = useState(null);
@@ -15,6 +29,8 @@ export function CuratorProvider({ children }) {
   const [messages, setMessages] = useState([]);
   const [dbLoaded, setDbLoaded] = useState(false);
   const prevMsgCount = useRef(0);
+  const [lensConversations, setLensConversations] = useState([]);
+  const [activeLensConversationId, setActiveLensConversationId] = useState(null);
 
   // Archive/remove state (moved from CuratorsApp)
   const [archived, setArchived] = useState({});
@@ -81,12 +97,64 @@ export function CuratorProvider({ children }) {
         .map(r => r.rec_file_id)
         .filter(Boolean);
 
-      // Fire rec_files + chat_messages in parallel
-      const [recFilesResult, msgsResult] = await Promise.all([
+      const lensConversationsEnabled = hasFeature(prof, 'lens_conversations_v1');
+
+      // Fire rec_files + Lens conversation/message load in parallel.
+      const [recFilesResult, lensLoadResult] = await Promise.all([
         recFileIds.length > 0
           ? supabase.from('rec_files').select('id, body_md, extraction, work, curation, curator_is_author, source').in('id', recFileIds)
           : Promise.resolve({ data: [], error: null }),
-        supabase.from('chat_messages').select('*').eq('profile_id', prof.id).order('created_at', { ascending: false }).limit(50)
+        (async () => {
+          if (!lensConversationsEnabled) {
+            const { data, error } = await supabase
+              .from('chat_messages')
+              .select('*')
+              .eq('profile_id', prof.id)
+              .order('created_at', { ascending: false })
+              .limit(50);
+            return { conversations: [], activeConversationId: null, messages: data || [], error, legacy: true };
+          }
+
+          const { data: conversations, error: convErr } = await supabase
+            .from('lens_conversations')
+            .select('*')
+            .eq('profile_id', prof.id)
+            .eq('status', 'active')
+            .order('last_message_at', { ascending: false })
+            .limit(25);
+
+          if (convErr) {
+            console.error('[LENS_CONVERSATIONS_LOAD_ERROR]', convErr.message);
+            return { conversations: [], activeConversationId: null, messages: [], error: convErr, legacy: false };
+          }
+
+          const now = Date.now();
+          const activeConversation = (conversations || []).find(c => {
+            const last = c.last_message_at ? new Date(c.last_message_at).getTime() : 0;
+            return Number.isFinite(last) && now - last <= LENS_ACTIVE_WINDOW_MS;
+          });
+
+          if (!activeConversation) {
+            return { conversations: conversations || [], activeConversationId: null, messages: [], error: null, legacy: false };
+          }
+
+          const { data: rows, error: msgErr } = await supabase
+            .from('chat_messages')
+            .select('*')
+            .eq('profile_id', prof.id)
+            .eq('conversation_id', activeConversation.id)
+            .order('created_at', { ascending: true })
+            .limit(100);
+
+          if (msgErr) console.error('[LENS_MESSAGES_LOAD_ERROR]', msgErr.message);
+          return {
+            conversations: conversations || [],
+            activeConversationId: activeConversation.id,
+            messages: rows || [],
+            error: msgErr,
+            legacy: false,
+          };
+        })()
       ]);
 
       if (recs && recs.length > 0) {
@@ -120,10 +188,16 @@ export function CuratorProvider({ children }) {
         }));
       }
 
-      const msgs = msgsResult.data;
-      if (msgs && msgs.length > 0) {
-        setMessages(msgs.reverse().map(m => ({ id: m.id, role: m.role === "assistant" ? "ai" : m.role, text: m.text, capturedRec: m.captured_rec, blocks: m.blocks || null, interactions: m.interactions || [], image_rec_candidate: m.meta?.imageRecCandidate || null })));
+      setLensConversations(lensLoadResult.conversations || []);
+      setActiveLensConversationId(lensLoadResult.activeConversationId || null);
+      const msgs = lensLoadResult.messages || [];
+      if (msgs.length > 0) {
+        const orderedMsgs = lensLoadResult.legacy ? msgs.slice().reverse() : msgs;
+        setMessages(orderedMsgs.map(mapChatMessage));
         prevMsgCount.current = msgs.length;
+      } else {
+        setMessages([]);
+        prevMsgCount.current = 0;
       }
 
       setDbLoaded(true);
@@ -192,6 +266,8 @@ export function CuratorProvider({ children }) {
         setProfileId(null);
         setTasteItems([]);
         setMessages([]);
+        setLensConversations([]);
+        setActiveLensConversationId(null);
         setMySubscriptions([]);
         setMySubscribers([]);
         setMySubscriptionIds(new Set());
@@ -514,9 +590,71 @@ export function CuratorProvider({ children }) {
     }
   };
 
-  const saveMsgToDb = async (role, text, capturedRec, blocks, recRefs = [], metaPayload = null) => {
+  const loadLensConversationMessages = useCallback(async (conversationId) => {
+    if (!profileId || !conversationId) return [];
+    try {
+      const { data, error } = await supabase
+        .from('chat_messages')
+        .select('*')
+        .eq('profile_id', profileId)
+        .eq('conversation_id', conversationId)
+        .order('created_at', { ascending: true })
+        .limit(100);
+      if (error) {
+        console.error('[LENS_MESSAGES_LOAD_ERROR]', error.message);
+        return [];
+      }
+      const mapped = (data || []).map(mapChatMessage);
+      setMessages(mapped);
+      setActiveLensConversationId(conversationId);
+      prevMsgCount.current = mapped.length;
+      return mapped;
+    } catch (err) {
+      console.error('[LENS_MESSAGES_LOAD_ERROR]', err?.message || err);
+      return [];
+    }
+  }, [profileId]);
+
+  const createLensConversation = useCallback(async ({ title = null, source = 'lens' } = {}) => {
     if (!profileId) return null;
     try {
+      const now = new Date().toISOString();
+      const { data, error } = await supabase
+        .from('lens_conversations')
+        .insert({
+          profile_id: profileId,
+          title,
+          source,
+          status: 'active',
+          message_count: 0,
+          last_message_at: now,
+          updated_at: now,
+        })
+        .select('*')
+        .single();
+      if (error) {
+        console.error('[LENS_CONVERSATION_CREATE_ERROR]', error.message);
+        return null;
+      }
+      setLensConversations(prev => [data, ...prev.filter(c => c.id !== data.id)]);
+      setActiveLensConversationId(data.id);
+      return data;
+    } catch (err) {
+      console.error('[LENS_CONVERSATION_CREATE_ERROR]', err?.message || err);
+      return null;
+    }
+  }, [profileId]);
+
+  const startNewLensConversation = useCallback(() => {
+    setActiveLensConversationId(null);
+    setMessages([]);
+    prevMsgCount.current = 0;
+  }, []);
+
+  const saveMsgToDb = async (role, text, capturedRec, blocks, recRefs = [], metaPayload = null, conversationIdOverride = null) => {
+    if (!profileId) return null;
+    try {
+      const conversationId = conversationIdOverride || activeLensConversationId || null;
       const row = {
         profile_id: profileId,
         role: role === "ai" ? "assistant" : role,
@@ -525,9 +663,22 @@ export function CuratorProvider({ children }) {
         blocks: blocks || null,
         rec_refs: recRefs && recRefs.length > 0 ? recRefs : [],
       };
+      if (conversationId) row.conversation_id = conversationId;
       // Bug 3 fix: persist imageRecCandidate in meta jsonb for DB reload hydration
       if (metaPayload) row.meta = metaPayload;
       const { data } = await supabase.from("chat_messages").insert(row).select('id').single();
+      if (conversationId) {
+        const now = new Date().toISOString();
+        const { error: touchError } = await supabase
+          .from('lens_conversations')
+          .update({ last_message_at: now, updated_at: now })
+          .eq('id', conversationId)
+          .eq('profile_id', profileId);
+        if (touchError) console.error('[LENS_CONVERSATION_TOUCH_ERROR]', touchError.message);
+        setLensConversations(prev => prev.map(c => (
+          c.id === conversationId ? { ...c, last_message_at: now, updated_at: now } : c
+        )).sort((a, b) => new Date(b.last_message_at || 0) - new Date(a.last_message_at || 0)));
+      }
       return data?.id || null;
     } catch (err) { console.error("Failed to save message:", err); return null; }
   };
@@ -697,6 +848,13 @@ export function CuratorProvider({ children }) {
       messages, setMessages,
       dbLoaded,
       prevMsgCount,
+      lensConversationsEnabled: hasFeature(profile, 'lens_conversations_v1'),
+      lensConversations,
+      activeLensConversationId,
+      setActiveLensConversationId,
+      loadLensConversationMessages,
+      createLensConversation,
+      startNewLensConversation,
       addRec,
       deleteRec,
       updateRec,

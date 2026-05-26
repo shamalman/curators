@@ -58,3 +58,23 @@ No user-facing copy, prompt text, or AI output should contain em dashes.
 `app/api/chat/route.js` must scope server-side history fetches, recent `rec_refs` lookup, parsed-content persistence, image meta persistence, and chat-parse `rec_refs` updates by `conversation_id` when `lens_conversations_v1` is enabled. A clean-looking UI is not enough if the server still reads old lifetime messages.
 
 The existing `threads` and `thread_messages` tables are subscriber messaging infrastructure, not Lens AI conversations.
+
+## Current Rollout State
+
+Step 1 shipped the schema foundation and legacy backfill.
+
+Step 2 wires the `lens_conversations_v1` runtime path:
+
+- flagged Lens loads a fresh active conversation when `last_message_at` is within 6 hours
+- otherwise flagged Lens opens a clean canvas
+- new sends and Quick Capture saves create or reuse a Lens conversation
+- `/api/chat` scopes server-side history and latest-message updates by `conversation_id`
+- History reopens prior conversations
+- New conversation clears the active conversation locally
+
+Still pending after this cut:
+
+- durable one-shot pill tracking
+- Empty-state first-tap onboarding for `+ Recommendation`
+- richer state-aware rotating pill pools
+- telemetry

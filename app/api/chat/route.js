@@ -15,6 +15,7 @@ import { buildMediaEmbedBlocks } from "../../../lib/chat/media-embeds.js";
 import { uploadArtifact } from "../../../lib/rec-files/artifact.js";
 import { ingestChatParsedBlocks } from "../../../lib/chat/chat-parse-ingest.js";
 import { CURATOR_STATS_TOOL, handleCuratorStatsTool } from "../../../lib/chat/stats-tool.js";
+import { isFeatureEnabled } from "../../../lib/features.js";
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -62,7 +63,7 @@ export async function POST(request) {
     const {
       message, isVisitor, curatorName, curatorHandle, curatorBio,
       profileId, recommendations, history,
-      generateOpening, image,
+      generateOpening, image, conversationId,
     } = await request.json();
 
     if (!message && !generateOpening && !image) {
@@ -98,6 +99,33 @@ export async function POST(request) {
       }
     }
     console.log(`[AI_PROFILE] route=chat profileId=${profileId} aiProfile=${aiProfile}`);
+
+    let scopedConversationId = null;
+    if (!isVisitor && profileId && conversationId) {
+      try {
+        const lensConversationsEnabled = await isFeatureEnabled(sb, profileId, 'lens_conversations_v1');
+        if (lensConversationsEnabled) {
+          const { data: conversationRow, error: conversationErr } = await sb
+            .from('lens_conversations')
+            .select('id')
+            .eq('id', conversationId)
+            .eq('profile_id', profileId)
+            .maybeSingle();
+          if (conversationErr) {
+            console.error('[LENS_CONVERSATION_VERIFY_ERROR]', conversationErr.message);
+            return NextResponse.json({ message: "Conversation not available" }, { status: 500 });
+          } else if (conversationRow?.id) {
+            scopedConversationId = conversationRow.id;
+          } else {
+            console.error(`[LENS_CONVERSATION_VERIFY_ERROR] conversation not found profileId=${profileId} conversationId=${conversationId}`);
+            return NextResponse.json({ message: "Conversation not found" }, { status: 403 });
+          }
+        }
+      } catch (err) {
+        console.error('[LENS_CONVERSATION_VERIFY_ERROR]', err?.message || err);
+        return NextResponse.json({ message: "Conversation not available" }, { status: 500 });
+      }
+    }
 
     // ── Link parsing (curator modes only, not visitor, not opening generation) ──
     let linkContextBlock = "";
@@ -279,14 +307,15 @@ You could NOT access the full content of this link. Acknowledge only the title a
       // best-effort and non-blocking on failure.
       if (profileId && parsedBlock?.content) {
         try {
-          const { data: latestUserMsg } = await sb
+          let latestUserMsgQuery = sb
             .from('chat_messages')
             .select('id')
             .eq('profile_id', profileId)
             .eq('role', 'user')
             .order('created_at', { ascending: false })
-            .limit(1)
-            .single();
+            .limit(1);
+          if (scopedConversationId) latestUserMsgQuery = latestUserMsgQuery.eq('conversation_id', scopedConversationId);
+          const { data: latestUserMsg } = await latestUserMsgQuery.single();
           if (latestUserMsg) {
             await sb.from('chat_messages').update({
               parsed_content: [{
@@ -316,12 +345,14 @@ You could NOT access the full content of this link. Acknowledge only the title a
     // via the TASTE READ REQUEST block; re-injecting prior context degrades the read.
     if (!isVisitor && profileId && !generateOpening && !hasNewParsedContent && !tasteReadUrl) {
       try {
-        const { data: recentMsgs } = await sb
+        let recentMsgsQuery = sb
           .from('chat_messages')
           .select('rec_refs')
           .eq('profile_id', profileId)
           .order('created_at', { ascending: false })
           .limit(5);
+        if (scopedConversationId) recentMsgsQuery = recentMsgsQuery.eq('conversation_id', scopedConversationId);
+        const { data: recentMsgs } = await recentMsgsQuery;
 
         if (recentMsgs) {
           const msgWithContent = recentMsgs.find(m =>
@@ -572,12 +603,14 @@ The curator will choose what to do with it via the action buttons.
     let serverHistory = [];
     if (profileId) {
       try {
-        const { data: rows, error: histErr } = await sb
+        let historyQuery = sb
           .from('chat_messages')
           .select('id, role, text, captured_rec, meta, created_at')
           .eq('profile_id', profileId)
           .order('created_at', { ascending: false })
           .limit(10);
+        if (scopedConversationId) historyQuery = historyQuery.eq('conversation_id', scopedConversationId);
+        const { data: rows, error: histErr } = await historyQuery;
 
         if (histErr) {
           console.error('[HISTORY_FETCH_ERROR]', histErr.message);
@@ -1122,14 +1155,15 @@ ${tasteReadContent}
     let parsedContentMessageId = null;
     if (parsedContentForStorage.length > 0 && profileId) {
       try {
-        const { data: latestUserMsg } = await sb
+        let latestUserMsgQuery = sb
           .from('chat_messages')
           .select('id')
           .eq('profile_id', profileId)
           .eq('role', 'user')
           .order('created_at', { ascending: false })
-          .limit(1)
-          .single();
+          .limit(1);
+        if (scopedConversationId) latestUserMsgQuery = latestUserMsgQuery.eq('conversation_id', scopedConversationId);
+        const { data: latestUserMsg } = await latestUserMsgQuery.single();
 
         if (latestUserMsg) {
           parsedContentMessageId = latestUserMsg.id;
@@ -1151,14 +1185,15 @@ ${tasteReadContent}
     // ── Persist image artifact pointers on the latest user row for history rehydration ──
     if (imageRecCandidate && profileId) {
       try {
-        const { data: latestUserRow, error: findErr } = await sb
+        let latestUserRowQuery = sb
           .from('chat_messages')
           .select('id, meta')
           .eq('profile_id', profileId)
           .eq('role', 'user')
           .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
+          .limit(1);
+        if (scopedConversationId) latestUserRowQuery = latestUserRowQuery.eq('conversation_id', scopedConversationId);
+        const { data: latestUserRow, error: findErr } = await latestUserRowQuery.maybeSingle();
 
         if (findErr) {
           console.error('[IMAGE_META_PERSIST_ERROR] find', findErr.message);
