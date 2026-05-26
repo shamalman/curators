@@ -4,6 +4,8 @@ Operating manual for Claude Code in this repo. Loaded every session, so it stays
 
 Last reviewed: May 13, 2026.
 
+See AGENTS.md for current multi-agent coordination and file ownership.
+
 ---
 
 ## Mission
