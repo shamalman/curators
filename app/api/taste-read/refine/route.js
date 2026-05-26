@@ -82,14 +82,14 @@ export async function POST(request) {
       return NextResponse.json({ error: "Insert failed" }, { status: 500 });
     }
 
-    (async () => {
-      try {
-        await generateTasteProfile(profileId, admin);
-        console.log("[TASTE_READ_REFINE] taste profile regenerated for", profileId);
-      } catch (err) {
-        console.error("[TASTE_READ_REFINE] taste profile regen failed:", err?.message || err);
-      }
-    })();
+    try {
+      await generateTasteProfile(profileId, admin);
+      console.log("[TASTE_READ_REFINE] taste profile regenerated for", profileId);
+    } catch (err) {
+      console.error("[TASTE_READ_REFINE] taste profile regen failed:", err?.message || err);
+      // Note: regen failure is non-fatal for the user-facing action. The confirmation/refinement
+      // has already persisted; only the Record regen failed. Surface in logs but do not throw.
+    }
 
     console.log(`[TASTE_READ_REFINE] profileId=${profileId} base=${baseKey} refinedLength=${refined.length}`);
     return NextResponse.json({ ok: true });
@@ -154,14 +154,14 @@ export async function DELETE(request) {
       return NextResponse.json({ error: "Delete failed" }, { status: 500 });
     }
 
-    (async () => {
-      try {
-        await generateTasteProfile(profileId, admin);
-        console.log("[TASTE_READ_REFINE_UNDO] taste profile regenerated for", profileId);
-      } catch (err) {
-        console.error("[TASTE_READ_REFINE_UNDO] regen failed:", err?.message || err);
-      }
-    })();
+    try {
+      await generateTasteProfile(profileId, admin);
+      console.log("[TASTE_READ_REFINE_UNDO] taste profile regenerated for", profileId);
+    } catch (err) {
+      console.error("[TASTE_READ_REFINE_UNDO] regen failed:", err?.message || err);
+      // Note: regen failure is non-fatal for the user-facing action. The confirmation/refinement
+      // has already persisted; only the Record regen failed. Surface in logs but do not throw.
+    }
 
     console.log(`[TASTE_READ_REFINE_UNDO] profileId=${profileId} base=${baseKey}`);
     return NextResponse.json({ ok: true, deleted: 1 });
