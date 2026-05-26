@@ -143,14 +143,14 @@ export function CuratorProvider({ children }) {
             .select('*')
             .eq('profile_id', prof.id)
             .eq('conversation_id', activeConversation.id)
-            .order('created_at', { ascending: true })
+            .order('created_at', { ascending: false })
             .limit(100);
 
           if (msgErr) console.error('[LENS_MESSAGES_LOAD_ERROR]', msgErr.message);
           return {
             conversations: conversations || [],
             activeConversationId: activeConversation.id,
-            messages: rows || [],
+            messages: (rows || []).reverse(),
             error: msgErr,
             legacy: false,
           };
@@ -598,13 +598,13 @@ export function CuratorProvider({ children }) {
         .select('*')
         .eq('profile_id', profileId)
         .eq('conversation_id', conversationId)
-        .order('created_at', { ascending: true })
+        .order('created_at', { ascending: false })
         .limit(100);
       if (error) {
         console.error('[LENS_MESSAGES_LOAD_ERROR]', error.message);
         return [];
       }
-      const mapped = (data || []).map(mapChatMessage);
+      const mapped = (data || []).reverse().map(mapChatMessage);
       setMessages(mapped);
       setActiveLensConversationId(conversationId);
       prevMsgCount.current = mapped.length;
