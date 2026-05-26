@@ -1082,11 +1082,11 @@ Keep it conversational. Ask one useful question at a time. Do not use em dashes.
                     </span>
                     <span>Help me write a Recommendation</span>
                   </button>
-                  <button onClick={() => router.push('/me/taste')} style={{ width: "100%", textAlign: "left", border: "none", background: "transparent", color: T.ink, padding: 0, fontFamily: F, fontSize: isDesktop ? 20 : 18, cursor: "pointer", display: "flex", alignItems: "center", gap: 18 }}>
+                  <button onClick={() => router.push('/find')} style={{ width: "100%", textAlign: "left", border: "none", background: "transparent", color: T.ink, padding: 0, fontFamily: F, fontSize: isDesktop ? 20 : 18, cursor: "pointer", display: "flex", alignItems: "center", gap: 18 }}>
                     <span style={{ width: 30, height: 30, color: T.ink2, display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                      <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5V5a2 2 0 0 1 2-2h12v18H6a2 2 0 0 1-2-1.5Z" /><path d="M8 7h6" /><path d="M8 11h5" /></svg>
+                      <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 6h16" /><path d="M4 12h16" /><path d="M4 18h10" /><circle cx="19" cy="18" r="1.5" /></svg>
                     </span>
-                    <span>Review my Record</span>
+                    <span>Show me new Recommendations</span>
                   </button>
                   <button onClick={() => setFeedbackSheetOpen(true)} style={{ width: "100%", textAlign: "left", border: "none", background: "transparent", color: T.ink2, padding: 0, fontFamily: F, fontSize: isDesktop ? 18 : 16, cursor: "pointer", display: feedbackSheetOpen ? "none" : "flex", alignItems: "center", gap: 18 }}>
                     <span style={{ width: 30, height: 30, color: T.ink2, display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
