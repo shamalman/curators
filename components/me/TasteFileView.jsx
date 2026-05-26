@@ -71,6 +71,31 @@ function parseDomains(domainsText) {
   return domains
 }
 
+function parsePatterns(patternsText) {
+  if (!patternsText) return []
+
+  // Patterns use the same `**Name**: description` format as Domains, but entries
+  // may run together, be single-newline separated, or blank-line separated.
+  // Split at each bold-name-colon boundary regardless of intervening whitespace.
+  const blocks = patternsText.split(/(?=\*\*[^*]+\*\*\s*:)/).filter(b => b.trim())
+
+  const patterns = []
+  for (const block of blocks) {
+    const trimmed = block.trim()
+    const nameMatch = trimmed.match(/\*\*([^*]+)\*\*/)
+    if (!nameMatch) continue // defensive: skip blocks without a bold name
+
+    const name = nameMatch[1].trim()
+    const description = trimmed
+      .replace(/\*\*[^*]+\*\*\s*:?\s*/, '')
+      .trim()
+
+    patterns.push({ name, description })
+  }
+
+  return patterns
+}
+
 function parseSubscriptions(subsText) {
   if (!subsText) return []
   return subsText
@@ -210,9 +235,33 @@ export default function TasteFileView() {
       {sections['Patterns'] && (
         <>
           <SectionHeader>Patterns</SectionHeader>
-          <p style={{ fontSize: 13, color: T.ink2, lineHeight: 1.6, fontFamily: F, margin: 0 }}>
-            {sections['Patterns']}
-          </p>
+          {(() => {
+            const patterns = parsePatterns(sections['Patterns'])
+            // Fall back to a single paragraph if the row is malformed.
+            if (patterns.length === 0) {
+              return (
+                <p style={{ fontSize: 13, color: T.ink2, lineHeight: 1.6, fontFamily: F, margin: 0 }}>
+                  {sections['Patterns']}
+                </p>
+              )
+            }
+            return patterns.map((pattern, i, arr) => (
+              <div key={i} style={{
+                paddingBottom: 12,
+                marginBottom: 12,
+                borderBottom: i < arr.length - 1 ? '1px solid ' + T.bg2 : 'none',
+              }}>
+                <div style={{ fontWeight: 600, fontSize: 14, color: T.ink, fontFamily: F }}>
+                  {pattern.name}
+                </div>
+                {pattern.description && (
+                  <div style={{ fontSize: 13, color: T.ink2, lineHeight: 1.5, fontFamily: F, marginTop: 4 }}>
+                    {pattern.description}
+                  </div>
+                )}
+              </div>
+            ))
+          })()}
         </>
       )}
 
@@ -220,7 +269,16 @@ export default function TasteFileView() {
       {sections['Voice & Style'] && (
         <>
           <SectionHeader>Voice & Style</SectionHeader>
-          <p style={{ fontSize: 13, color: T.ink2, lineHeight: 1.6, fontFamily: F, margin: 0 }}>
+          <p style={{
+            fontFamily: S,
+            fontStyle: 'italic',
+            fontSize: 15,
+            lineHeight: 1.6,
+            color: T.ink,
+            borderLeft: '2px solid ' + T.acc,
+            paddingLeft: 16,
+            marginTop: 8,
+          }}>
             {sections['Voice & Style']}
           </p>
         </>
