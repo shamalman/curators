@@ -126,6 +126,7 @@ Notes: Derived table, rebuilt from `rec_files.body_md`. Never edited directly. S
 |---|---|---|
 | id | uuid | NO |
 | profile_id | uuid | NO |
+| conversation_id | uuid | YES |
 | role | text | NO |
 | text | text | NO |
 | captured_rec | jsonb | YES |
@@ -136,7 +137,29 @@ Notes: Derived table, rebuilt from `rec_files.body_md`. Never edited directly. S
 | rec_refs | jsonb | NO |
 | meta | jsonb | YES |
 
-Notes: `parsed_content` = link parse results, re-injected within 5-message window. `rec_refs` = future rec_files references (not yet populated by chat route). `blocks` = content block array (text/MediaEmbed/ActionButtons).
+Notes: `conversation_id` → `lens_conversations.id` (nullable during migration/backfill). New Lens messages should belong to a conversation once `lens_conversations_v1` is enabled. `parsed_content` = link parse results, re-injected within the current conversation window. `rec_refs` = rec_files references for parsed links. `blocks` = content block array (text/MediaEmbed/ActionButtons).
+
+## lens_conversations
+| Column | Type | Nullable |
+|---|---|---|
+| id | uuid | NO |
+| profile_id | uuid | NO |
+| title | text | YES |
+| status | text | NO |
+| source | text | NO |
+| message_count | integer | NO |
+| last_message_at | timestamptz | NO |
+| created_at | timestamptz | NO |
+| updated_at | timestamptz | NO |
+| archived_at | timestamptz | YES |
+| meta | jsonb | NO |
+
+Notes: Lens conversation/thread substrate for `/myai`. User-facing copy calls these "conversations"; code may use "session" only for UI lifecycle. `source = 'legacy_backfill'` marks the one backfilled "Legacy Lens history" conversation per profile. RLS enabled.
+
+RLS policies:
+- SELECT: caller owns the parent profile.
+- INSERT: caller owns the parent profile.
+- UPDATE: caller owns the parent profile.
 
 ## taste_profiles
 | Column | Type | Nullable |

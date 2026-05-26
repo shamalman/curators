@@ -71,7 +71,12 @@ const hasValidLink = (links) => (links || []).some(l => isSpecificLink(l.url));
 
 export default function ChatView({ variant }) {
   const router = useRouter();
-  const { profile, setProfile, profileId, isFirstTime, tasteItems, messages, setMessages, dbLoaded, prevMsgCount, addRec, saveMsgToDb, saveProfileFromChat, isOwner, signalCount } = useCurator();
+  const {
+    profile, setProfile, profileId, isFirstTime, tasteItems, messages, setMessages, dbLoaded, prevMsgCount,
+    lensConversationsEnabled, lensConversations, activeLensConversationId, loadLensConversationMessages,
+    createLensConversation, startNewLensConversation,
+    addRec, saveMsgToDb, saveProfileFromChat, isOwner, signalCount,
+  } = useCurator();
   const [input, setInput] = useState("");
   const [typing, setTyping] = useState(false);
   const [pendingLink, setPendingLink] = useState(null);
@@ -99,6 +104,7 @@ export default function ChatView({ variant }) {
   // Quick capture state
   const [sheetOpen, setSheetOpen] = useState(false);
   const [feedbackSheetOpen, setFeedbackSheetOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const [lastRecVisibility, setLastRecVisibility] = useState('public');
   // Feature C: prefill data for QuickCaptureSheet when opened from a chat action button
   const [sheetPrefillData, setSheetPrefillData] = useState(null);
@@ -112,6 +118,14 @@ export default function ChatView({ variant }) {
   const items = tasteItems;
   const n = items.length;
   const cats = [...new Set(items.map(i => i.category))];
+  const showLensCanvas = isCurator && lensConversationsEnabled && messages.length === 0 && !typing && input.length === 0 && !pendingImage;
+
+  const ensureLensConversation = useCallback(async ({ title = null } = {}) => {
+    if (!lensConversationsEnabled) return null;
+    if (activeLensConversationId) return activeLensConversationId;
+    const created = await createLensConversation?.({ title });
+    return created?.id || null;
+  }, [activeLensConversationId, createLensConversation, lensConversationsEnabled]);
 
   useEffect(() => { return () => { if (nudgeTimer.current) clearTimeout(nudgeTimer.current); }; }, []);
 
@@ -179,6 +193,7 @@ export default function ChatView({ variant }) {
   // Quick capture save handler — called by QuickCaptureSheet
   const handleQuickCaptureSaved = async (newItem) => {
     try {
+      const conversationId = await ensureLensConversation({ title: newItem?.title || "Recommendation" });
       const saved = await addRec(newItem);
       const recFileId = saved?.rec_file_id || null;
       const recRefs = recFileId ? [recFileId] : [];
@@ -188,7 +203,7 @@ export default function ChatView({ variant }) {
       // Toast: matches existing in-chat pattern (insert a system AI message)
       const toastText = `\u2713 Saved "${saved.title}".`;
       setMessages(prev => [...prev, { role: "ai", text: toastText }]);
-      saveMsgToDb("ai", toastText, null, null, recRefs);
+      saveMsgToDb("ai", toastText, null, null, recRefs, null, conversationId);
       // Trigger taste profile regen (mirrors line ~501 from in-chat path)
       const recCount = items.length + 1;
       if (recCount >= 3) {
@@ -262,6 +277,7 @@ If you cannot produce a clean 2-sentence response that satisfies all constraints
               curatorHandle: profile.handle?.replace('@', ''),
               curatorBio: profile.bio || '',
               profileId,
+              conversationId,
               recommendations: recsForPrompt,
               linkMetadata: null,
               history: messages.filter(m => !m.type).slice(-10),
@@ -275,7 +291,7 @@ If you cannot produce a clean 2-sentence response that satisfies all constraints
           text = text.replace(/\[REC\][\s\S]*?\[\/REC\]/, '').trim();
           if (!text) return;
           setMessages(prev => [...prev, { role: "ai", text, blocks: data.blocks || null, interactions: [] }]);
-          saveMsgToDb("ai", text, null, data.blocks, recRefs);
+          saveMsgToDb("ai", text, null, data.blocks, recRefs, null, conversationId);
         } catch (err) {
           console.error('Quick capture taste reflection error:', err);
           setTyping(false);
@@ -433,6 +449,7 @@ If you cannot produce a clean 2-sentence response that satisfies all constraints
   const openingGenerated = useRef(false);
   useEffect(() => {
     if (!dbLoaded || !isCurator || !profile) return;
+    if (lensConversationsEnabled) return;
     if (messages.length > 0) return;
 
     // First-time curator: generate personalized AI opening via API
@@ -485,9 +502,12 @@ If you cannot produce a clean 2-sentence response that satisfies all constraints
     const msg = overrideMsg || input.trim();
     if (!msg && !pendingImage) return;
     const imageToSend = pendingImage;
+    const conversationId = await ensureLensConversation({
+      title: msg ? msg.slice(0, 80) : (imageToSend ? "Image conversation" : null),
+    });
     shouldScroll.current = true;
     setMessages(m => [...m, { role: "user", text: msg || (imageToSend ? "[sent an image]" : ""), imagePreview: imageToSend?.previewUrl || null }]);
-    saveMsgToDb("user", msg || "[sent an image]");
+    saveMsgToDb("user", msg || "[sent an image]", null, null, [], null, conversationId);
     setInput("");
     setPendingImage(null);
     setTyping(true);
@@ -519,6 +539,7 @@ If you cannot produce a clean 2-sentence response that satisfies all constraints
           curatorHandle: profile.handle?.replace('@', ''),
           curatorBio: profile.bio || '',
           profileId,
+          conversationId,
           recommendations: items.map(item => ({
             title: item.title, category: item.category,
             context: item.context, tags: item.tags, date: item.date,
@@ -590,7 +611,7 @@ If you cannot produce a clean 2-sentence response that satisfies all constraints
           ...(serverMeta || {}),
         };
       }
-      const savedId = await saveMsgToDb("ai", text, capturedRec, data.blocks, [], metaForDb);
+      const savedId = await saveMsgToDb("ai", text, capturedRec, data.blocks, [], metaForDb, conversationId);
       if (savedId) {
         setMessages(m => m.map((msg, idx) => idx === m.length - 1 && msg.role === "ai" && !msg.id ? { ...msg, id: savedId } : msg));
       }
@@ -598,7 +619,9 @@ If you cannot produce a clean 2-sentence response that satisfies all constraints
       console.error('Chat error:', error);
       setTyping(false);
       isWaitingForResponse.current = false;
-      setMessages(m => [...m, { role: "ai", text: "Sorry, I'm having trouble connecting right now. Try again in a moment." }]);
+      const errorText = "Sorry, I'm having trouble connecting right now. Try again in a moment.";
+      setMessages(m => [...m, { role: "ai", text: errorText }]);
+      saveMsgToDb("ai", errorText, null, null, [], null, conversationId);
     }
   };
 
@@ -906,6 +929,7 @@ If you cannot produce a clean 2-sentence response that satisfies all constraints
             curatorHandle: profile.handle?.replace('@', ''),
             curatorBio: profile.bio || '',
             profileId,
+            conversationId: activeLensConversationId,
             recommendations: recsForPrompt,
             linkMetadata: null,
             history: messages.filter(m => !m.type).slice(-10),
@@ -918,7 +942,7 @@ If you cannot produce a clean 2-sentence response that satisfies all constraints
         text = text.replace(/\[REC\][\s\S]*?\[\/REC\]/, '').trim();
         if (!text) text = ' ';
         setMessages(prev => [...prev, { role: "ai", text, blocks: data.blocks || null, interactions: [] }]);
-        saveMsgToDb("ai", text, null, data.blocks);
+        saveMsgToDb("ai", text, null, data.blocks, [], null, activeLensConversationId);
       } catch (err) {
         console.error('Taste reflection error:', err);
         setTyping(false);
@@ -961,6 +985,27 @@ If you cannot produce a clean 2-sentence response that satisfies all constraints
     setPendingLink(null);
   };
 
+  const openLensConversation = async (conversationId) => {
+    setHistoryOpen(false);
+    setInput("");
+    setPendingImage(null);
+    await loadLensConversationMessages?.(conversationId);
+  };
+
+  const resetLensConversation = () => {
+    setHistoryOpen(false);
+    setInput("");
+    setPendingImage(null);
+    setPendingLink(null);
+    setEditingCapture(null);
+    startNewLensConversation?.();
+  };
+
+  const prefillLensPrompt = (text) => {
+    setInput(text);
+    typedSinceSave.current = true;
+  };
+
   // ── CURATOR CHAT ──
   if (isCurator) {
     const newRequests = []; // placeholder for requests integration
@@ -978,13 +1023,47 @@ If you cannot produce a clean 2-sentence response that satisfies all constraints
               <div style={{ fontSize: 10, color: T.ink3, fontFamily: MN, fontWeight: 400, marginTop: 2 }}>{n} recs {"\u00B7"} {cats.length} categories</div>
             </div>
           </div>
-          {isDesktop && <div style={{ fontSize: 10, color: T.ink3, fontFamily: MN }}>{n} recs</div>}
+          {lensConversationsEnabled ? (
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <button onClick={() => setHistoryOpen(v => !v)} style={{ border: `1px solid ${W.bdr}`, background: "transparent", color: T.ink2, borderRadius: 999, padding: "6px 10px", fontFamily: F, fontSize: 12, cursor: "pointer" }}>History</button>
+              {messages.length > 0 && (
+                <button onClick={resetLensConversation} style={{ border: `1px solid ${W.bdr}`, background: W.s, color: T.ink2, borderRadius: 999, padding: "6px 10px", fontFamily: F, fontSize: 12, cursor: "pointer" }}>New conversation</button>
+              )}
+            </div>
+          ) : (
+            isDesktop && <div style={{ fontSize: 10, color: T.ink3, fontFamily: MN }}>{n} recs</div>
+          )}
         </div>
         </div>
+        {historyOpen && lensConversationsEnabled && (
+          <div style={{ flexShrink: 0, borderBottom: `1px solid ${W.bdr}`, background: W.s }}>
+            <div style={{ maxWidth: 700, margin: "0 auto", padding: "10px 16px", display: "grid", gap: 6 }}>
+              {(lensConversations || []).length === 0 ? (
+                <div style={{ fontFamily: F, fontSize: 12, color: T.ink3 }}>No conversations yet.</div>
+              ) : (lensConversations || []).map(c => (
+                <button key={c.id} onClick={() => openLensConversation(c.id)} style={{ width: "100%", textAlign: "left", border: `1px solid ${W.bdr}`, background: c.id === activeLensConversationId ? W.s2 : "transparent", color: T.ink, borderRadius: 8, padding: "9px 10px", fontFamily: F, cursor: "pointer" }}>
+                  <div style={{ fontSize: 13, fontWeight: 650, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.title || "Lens conversation"}</div>
+                  <div style={{ fontSize: 10, color: T.ink3, marginTop: 2 }}>{c.last_message_at ? new Date(c.last_message_at).toLocaleDateString() : ""}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minHeight: 0, background: W.bg }}>
           <div ref={chatScrollRef} onScroll={() => { const el = chatScrollRef.current; if (el) setShowScrollBtn(el.scrollTop < el.scrollHeight - el.clientHeight - 100); }} style={{ flex: 1, overflowY: "auto", WebkitOverflowScrolling: "touch", overscrollBehavior: "none", minHeight: 0, touchAction: "pan-y" }}>
             <div style={{ maxWidth: 700, margin: "0 auto", padding: "12px 16px" }}>
             <ErrorBoundary>
+            {showLensCanvas && (
+              <div style={{ minHeight: 220, display: "flex", flexDirection: "column", justifyContent: "flex-end", padding: "28px 0 18px" }}>
+                <div style={{ fontFamily: S, fontSize: isDesktop ? 30 : 26, color: T.ink, lineHeight: 1.1, marginBottom: 10 }}>What do you want to work on?</div>
+                <div style={{ fontFamily: F, fontSize: 14, color: T.ink3, lineHeight: 1.5, marginBottom: 18 }}>Start fresh, or reopen an older conversation from History.</div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                  <button onClick={() => setSheetOpen(true)} style={{ border: `1px solid ${T.acc}`, background: T.acc, color: T.accText, borderRadius: 999, padding: "9px 13px", fontFamily: F, fontSize: 13, fontWeight: 650, cursor: "pointer" }}>+ Recommendation</button>
+                  <button onClick={() => prefillLensPrompt("What have I been into lately?")} style={{ border: `1px solid ${W.bdr}`, background: W.s, color: T.ink2, borderRadius: 999, padding: "9px 13px", fontFamily: F, fontSize: 13, cursor: "pointer" }}>What have I been into lately?</button>
+                  <button onClick={() => router.push('/me/taste')} style={{ border: `1px solid ${W.bdr}`, background: W.s, color: T.ink2, borderRadius: 999, padding: "9px 13px", fontFamily: F, fontSize: 13, cursor: "pointer" }}>Review my Record</button>
+                </div>
+              </div>
+            )}
             {messages.map((msg, i) => {
               // Request alert card
               if (msg.type === "requestAlert") {
@@ -1361,7 +1440,7 @@ If you cannot produce a clean 2-sentence response that satisfies all constraints
           <div style={{ padding: "10px 16px 12px", flexShrink: 0, minWidth: 0, maxWidth: 700, margin: "0 auto", width: "100%", boxSizing: "border-box", overflow: "hidden" }}>
             <div style={{ display: "flex", flexDirection: "row", gap: 8, marginBottom: 8, minWidth: 0, flexWrap: "nowrap" }}>
               <QuickCaptureChip
-                visible={input.length === 0 && !sheetOpen && !feedbackSheetOpen && !pendingImage}
+                visible={!showLensCanvas && input.length === 0 && !sheetOpen && !feedbackSheetOpen && !pendingImage}
                 onTap={() => setSheetOpen(true)}
               />
               <FeedbackChip

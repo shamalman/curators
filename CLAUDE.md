@@ -133,6 +133,14 @@ Three-option URL-drop block emits unconditionally on URL drops (Save as Recommen
 
 Full mechanics, tool use, re-injection, charter: `docs/chat-route.md`.
 
+### Lens Conversations
+
+Lens (`/myai`) is moving from one lifetime chat log to real conversations. Short-term working memory should come from the active `lens_conversations` row via `chat_messages.conversation_id`; long-term memory remains recommendations, Record, saves, subscriptions, and confirmed Reads.
+
+Feature flag: `profiles.feature_flags.lens_conversations_v1`. Initial rollout targets @shamal and @chris, then tester profiles. History lists conversations, not raw messages. New Lens messages should belong to a conversation once the flag is enabled.
+
+Full architecture: `docs/lens-conversations.md`.
+
 ### AI Skills System
 
 Skills live under `lib/prompts/skills/`. Three lanes:
@@ -240,6 +248,7 @@ context/CuratorContext.jsx                 addRec dual-write
 components/chat/ChatView.jsx               chat UI, rec save, post-save injection, Read save handoff
 components/taste-read/TasteReadCard.jsx    Read card (chip flow)
 components/me/TasteTimeline.jsx            timeline UI
+docs/lens-conversations.md                 Lens conversation/thread model
 scripts/regenerate-taste-profile.mjs       manual regen — requires --profile flag
 ```
 
