@@ -31,117 +31,72 @@ CREATE INDEX IF NOT EXISTS chat_messages_conversation_created_idx
 
 ALTER TABLE public.lens_conversations ENABLE ROW LEVEL SECURITY;
 
-DO $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_policies
-    WHERE schemaname = 'public'
-      AND tablename = 'lens_conversations'
-      AND policyname = 'Lens conversation owners can read'
-  ) THEN
-    CREATE POLICY "Lens conversation owners can read"
-      ON public.lens_conversations
-      FOR SELECT
-      USING (
-        EXISTS (
-          SELECT 1 FROM public.profiles p
-          WHERE p.id = lens_conversations.profile_id
-            AND p.auth_user_id = auth.uid()
-        )
-      );
-  END IF;
-END $$;
+DROP POLICY IF EXISTS "Lens conversation owners can read" ON public.lens_conversations;
+CREATE POLICY "Lens conversation owners can read"
+  ON public.lens_conversations
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.profiles p
+      WHERE p.id = lens_conversations.profile_id
+        AND p.auth_user_id = auth.uid()
+    )
+  );
 
-DO $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_policies
-    WHERE schemaname = 'public'
-      AND tablename = 'lens_conversations'
-      AND policyname = 'Lens conversation owners can create'
-  ) THEN
-    CREATE POLICY "Lens conversation owners can create"
-      ON public.lens_conversations
-      FOR INSERT
-      WITH CHECK (
-        EXISTS (
-          SELECT 1 FROM public.profiles p
-          WHERE p.id = lens_conversations.profile_id
-            AND p.auth_user_id = auth.uid()
-        )
-      );
-  END IF;
-END $$;
+DROP POLICY IF EXISTS "Lens conversation owners can create" ON public.lens_conversations;
+CREATE POLICY "Lens conversation owners can create"
+  ON public.lens_conversations
+  FOR INSERT
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.profiles p
+      WHERE p.id = lens_conversations.profile_id
+        AND p.auth_user_id = auth.uid()
+    )
+  );
 
-DO $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_policies
-    WHERE schemaname = 'public'
-      AND tablename = 'lens_conversations'
-      AND policyname = 'Lens conversation owners can update'
-  ) THEN
-    CREATE POLICY "Lens conversation owners can update"
-      ON public.lens_conversations
-      FOR UPDATE
-      USING (
-        EXISTS (
-          SELECT 1 FROM public.profiles p
-          WHERE p.id = lens_conversations.profile_id
-            AND p.auth_user_id = auth.uid()
-        )
-      )
-      WITH CHECK (
-        EXISTS (
-          SELECT 1 FROM public.profiles p
-          WHERE p.id = lens_conversations.profile_id
-            AND p.auth_user_id = auth.uid()
-        )
-      );
-  END IF;
-END $$;
+DROP POLICY IF EXISTS "Lens conversation owners can update" ON public.lens_conversations;
+CREATE POLICY "Lens conversation owners can update"
+  ON public.lens_conversations
+  FOR UPDATE
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.profiles p
+      WHERE p.id = lens_conversations.profile_id
+        AND p.auth_user_id = auth.uid()
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.profiles p
+      WHERE p.id = lens_conversations.profile_id
+        AND p.auth_user_id = auth.uid()
+    )
+  );
 
-DO $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_policies
-    WHERE schemaname = 'public'
-      AND tablename = 'chat_messages'
-      AND policyname = 'Lens message owners can read'
-  ) THEN
-    CREATE POLICY "Lens message owners can read"
-      ON public.chat_messages
-      FOR SELECT
-      USING (
-        EXISTS (
-          SELECT 1 FROM public.profiles p
-          WHERE p.id = chat_messages.profile_id
-            AND p.auth_user_id = auth.uid()
-        )
-      );
-  END IF;
-END $$;
+DROP POLICY IF EXISTS "Lens message owners can read" ON public.chat_messages;
+CREATE POLICY "Lens message owners can read"
+  ON public.chat_messages
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.profiles p
+      WHERE p.id = chat_messages.profile_id
+        AND p.auth_user_id = auth.uid()
+    )
+  );
 
-DO $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_policies
-    WHERE schemaname = 'public'
-      AND tablename = 'chat_messages'
-      AND policyname = 'Lens message owners can create'
-  ) THEN
-    CREATE POLICY "Lens message owners can create"
-      ON public.chat_messages
-      FOR INSERT
-      WITH CHECK (
-        EXISTS (
-          SELECT 1 FROM public.profiles p
-          WHERE p.id = chat_messages.profile_id
-            AND p.auth_user_id = auth.uid()
-        )
-      );
-  END IF;
-END $$;
+DROP POLICY IF EXISTS "Lens message owners can create" ON public.chat_messages;
+CREATE POLICY "Lens message owners can create"
+  ON public.chat_messages
+  FOR INSERT
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.profiles p
+      WHERE p.id = chat_messages.profile_id
+        AND p.auth_user_id = auth.uid()
+    )
+  );
 
 WITH message_profiles AS (
   SELECT
