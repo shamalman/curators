@@ -77,7 +77,7 @@ export default function PricingPage() {
               margin: '0 0 28px',
               maxWidth: 720,
             }}>
-              Curators is for people who want to share and learn from trusted perspectives. We&apos;re building a place where you can curate your world, find your people, and earn from your perspective. There&apos;s a vital world of life, art, and information beyond the grasp of AI and outside our algorithmic orbits. We&apos;ll meet you there on Curators.
+              Curators is for people who want to share and learn from trusted perspectives. We&apos;re building a place where you can curate your world, find your people, and earn from your perspective. There&apos;s a vital world of life, art, and information beyond the grasp of training data and outside our algorithmic orbits. We&apos;ll meet you there on Curators.
             </p>
 
             <p style={{
