@@ -2,6 +2,8 @@
 
 `app/api/chat/route.js` handles all conversational AI surfaces in the app: the Lens chat (`/myai`), visitor AI on public profiles (`/{handle}/ask`), and onboarding flows.
 
+For Lens conversations, see `docs/lens-conversations.md`. When `profiles.feature_flags.lens_conversations_v1` is enabled, `/api/chat` must scope Lens history and all "latest user message" updates by `chat_messages.conversation_id`; lifetime `profile_id` history is legacy behavior only.
+
 ---
 
 ## Modes
@@ -45,7 +47,7 @@ Network context is gated on `!tasteReadUrl` — suppressed on Read turns to avoi
 
 Synchronous. Up to 3 URLs parsed concurrently with a 15-second timeout per URL.
 
-Parsed content persists to `chat_messages.parsed_content` on the AI's response message. Re-injection within a 5-message window via `distillForReinjection` from `lib/chat/link-parsing.js`. Each re-injected block capped at ~800 chars; max 2 blocks total injected per turn.
+Parsed content persists to `chat_messages.parsed_content` on the current conversation's user message. Re-injection is scoped to the active Lens conversation once `lens_conversations_v1` is enabled. Legacy unflagged behavior still looks back by `profile_id`. Each re-injected block capped at ~800 chars; max 2 blocks total injected per turn.
 
 The re-injection path checks `rec_refs` first (rec saved from this URL → fetch from `rec_files` → inject via `buildRecFileContextBlock`). No fallback to raw `parsed_content` — that path was removed April 13, 2026 to prevent stale parser output from polluting context.
 
@@ -168,6 +170,7 @@ The stable `lib/prompts/charter.md` is a placeholder, never read. Charter only a
 
 ## Related docs
 
+- `docs/lens-conversations.md`: Lens conversation/thread model + clean canvas behavior
 - `docs/read-pipeline.md` — Read short-circuit + chip generation
 - `docs/record-architecture.md` — Record generation pipeline
 - `docs/staging-lane.md` — staging AI lane mechanics
