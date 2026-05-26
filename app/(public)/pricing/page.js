@@ -137,16 +137,16 @@ export default function PricingPage() {
 
             <div className="tier-grid">
               <TierCard
-                name="Free"
+                name="Always Free"
                 price="$0"
                 annual={null}
                 description="View and receive recommendations from curators you trust."
                 introLine={null}
                 features={[
                   'Subscribe to any curator on the network',
-                  'Receive recommendations by email, instant or digest',
+                  'Receive recommendations by email, text, app, and digest',
                   'Browse curator profiles and recommendations',
-                  'Financially support curators directly',
+                  'Directly support curators financially',
                 ]}
                 checkColor={T.ink}
                 ctaLabel="Get started"
@@ -162,13 +162,11 @@ export default function PricingPage() {
                 features={[
                   'Save recommendations to a personal reading list',
                   'Make recommendations of your own',
+                  'Your Record: a living portrait of your perspective built from your cosigns, saves, and recommendations, shared with people and agents you choose',
                   'Public profile you can customize at curators.com/your-handle',
                   'Cosign and comment on recommendations that moved you',
-                  'Your Record: a living portrait of your perspective built from your cosigns, saves, and recommendations, shared with people and agents you choose',
                   'A portion of your $5 flows to the curators you cosign',
                   'Earn from cosigns, saves, and subscriptions to your own recommendations',
-                  'Set pricing and access on your published recommendations',
-                  'Export your data anytime',
                 ]}
                 checkColor={COPPER}
                 ctaLabel="Start Supporter"
@@ -183,12 +181,12 @@ export default function PricingPage() {
                 introLine="Everything in Supporter, plus:"
                 features={[
                   "A personal Lens that helps you make recommendations, find what you'll love, and keep you up to date",
-                  'The Read: Submit any link, article, music, video, or podcast. Lens analyzes it through your Record and tells you how it fits.',
+                  'The Read: Submit any link, article, music, video, or podcast. Lens analyzes it through your Record and tells you how it fits',
                   "A visitor Lens on your public profile, so people can explore your perspective when you're not there",
                   'Direct messages and paid requests',
-                  "Recommendation watch: Background agents track news, releases, and events around the things you've recommended or saved.",
+                  "Recommendation watch: Background agents track news, releases, and events around the things you've recommended or saved",
                   'Recommendation analytics',
-                  "Catalog import: Connect Spotify, Letterboxd, Goodreads, and more. Lens reads what you've loved and helps build your Record with you.",
+                  "Catalog import: Connect Spotify, Letterboxd, Goodreads, and more. Lens reads what you've loved and helps build your Record with you",
                 ]}
                 checkColor={COPPER}
                 ctaLabel="Start Seat"
