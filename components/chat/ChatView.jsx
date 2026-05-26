@@ -499,15 +499,20 @@ If you cannot produce a clean 2-sentence response that satisfies all constraints
 
 
   const send = async (overrideMsg) => {
-    const msg = overrideMsg || input.trim();
+    const msg = typeof overrideMsg === "object" && overrideMsg !== null
+      ? (overrideMsg.message || "")
+      : (overrideMsg || input.trim());
+    const visibleMsg = typeof overrideMsg === "object" && overrideMsg !== null
+      ? (overrideMsg.displayText || msg)
+      : msg;
     if (!msg && !pendingImage) return;
     const imageToSend = pendingImage;
     const conversationId = await ensureLensConversation({
-      title: msg ? msg.slice(0, 80) : (imageToSend ? "Image conversation" : null),
+      title: visibleMsg ? visibleMsg.slice(0, 80) : (imageToSend ? "Image conversation" : null),
     });
     shouldScroll.current = true;
-    setMessages(m => [...m, { role: "user", text: msg || (imageToSend ? "[sent an image]" : ""), imagePreview: imageToSend?.previewUrl || null }]);
-    saveMsgToDb("user", msg || "[sent an image]", null, null, [], null, conversationId);
+    setMessages(m => [...m, { role: "user", text: visibleMsg || (imageToSend ? "[sent an image]" : ""), imagePreview: imageToSend?.previewUrl || null }]);
+    saveMsgToDb("user", visibleMsg || "[sent an image]", null, null, [], null, conversationId);
     setInput("");
     setPendingImage(null);
     setTyping(true);
@@ -1001,9 +1006,18 @@ If you cannot produce a clean 2-sentence response that satisfies all constraints
     startNewLensConversation?.();
   };
 
-  const prefillLensPrompt = (text) => {
-    setInput(text);
-    typedSinceSave.current = true;
+  const startRecommendationCoaching = () => {
+    send({
+      displayText: "Help me write a Recommendation",
+      message: `Help me write a Recommendation. Take the lead like a concise editor. First ask me for the thing I want to recommend, what kind of thing it is, and why it stuck with me. If I already provide a title, link, photo, or rough thought, turn it into a short Recommendation draft with:
+
+1. Title
+2. Category
+3. Why I recommend it
+4. Optional tags
+
+Keep it conversational. Ask one useful question at a time. Do not use em dashes.`,
+    });
   };
 
   // ── CURATOR CHAT ──
@@ -1054,19 +1068,32 @@ If you cannot produce a clean 2-sentence response that satisfies all constraints
             <div style={{ maxWidth: 700, margin: "0 auto", padding: "12px 16px" }}>
             <ErrorBoundary>
             {showLensCanvas && (
-              <div style={{ minHeight: isDesktop ? 360 : 300, display: "flex", flexDirection: "column", justifyContent: "center", padding: "24px 0 18px" }}>
-                <div style={{ fontFamily: S, fontSize: isDesktop ? 30 : 26, color: T.ink, lineHeight: 1.1, marginBottom: 10 }}>What would you like to do?</div>
-                <div style={{ fontFamily: F, fontSize: 14, color: T.ink3, lineHeight: 1.5, marginBottom: 18, maxWidth: 430 }}>Start a recommendation, shape an idea, or revisit your Record.</div>
-                <div style={{ display: "grid", gap: 8, width: "100%", maxWidth: 430 }}>
-                  <button onClick={() => setSheetOpen(true)} style={{ width: "100%", textAlign: "left", border: `1px solid ${T.acc}`, background: T.acc, color: T.accText, borderRadius: 14, padding: "13px 15px", fontFamily: F, fontSize: 14, fontWeight: 700, cursor: "pointer" }}>+ Recommendation</button>
-                  <button onClick={() => prefillLensPrompt("I want to talk through a recommendation before I save it")} style={{ width: "100%", textAlign: "left", border: `1px solid ${W.bdr}`, background: W.s, color: T.ink2, borderRadius: 14, padding: "13px 15px", fontFamily: F, fontSize: 14, cursor: "pointer" }}>Help me write a Recommendation</button>
-                  <button onClick={() => router.push('/me/taste')} style={{ width: "100%", textAlign: "left", border: `1px solid ${W.bdr}`, background: W.s, color: T.ink2, borderRadius: 14, padding: "13px 15px", fontFamily: F, fontSize: 14, cursor: "pointer" }}>Review my Record</button>
-                  <div style={{ paddingTop: 4 }}>
-                    <FeedbackChip
-                      visible={!feedbackSheetOpen}
-                      onTap={() => setFeedbackSheetOpen(true)}
-                    />
-                  </div>
+              <div style={{ minHeight: isDesktop ? "calc(100vh - 285px)" : "calc(100vh - 245px)", display: "flex", flexDirection: "column", justifyContent: "flex-end", padding: isDesktop ? "72px 0 18px" : "44px 0 14px" }}>
+                <div style={{ display: "grid", gap: isDesktop ? 22 : 18, width: "100%", maxWidth: 430, paddingBottom: isDesktop ? 16 : 10 }}>
+                  <button onClick={() => setSheetOpen(true)} style={{ width: "100%", textAlign: "left", border: "none", background: "transparent", color: T.ink, padding: 0, fontFamily: F, fontSize: isDesktop ? 20 : 18, cursor: "pointer", display: "flex", alignItems: "center", gap: 18 }}>
+                    <span style={{ width: 30, height: 30, color: T.acc, display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M12 5v14" /><path d="M5 12h14" /></svg>
+                    </span>
+                    <span>Recommendation</span>
+                  </button>
+                  <button onClick={startRecommendationCoaching} style={{ width: "100%", textAlign: "left", border: "none", background: "transparent", color: T.ink, padding: 0, fontFamily: F, fontSize: isDesktop ? 20 : 18, cursor: "pointer", display: "flex", alignItems: "center", gap: 18 }}>
+                    <span style={{ width: 30, height: 30, color: T.ink2, display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
+                    </span>
+                    <span>Help me write a Recommendation</span>
+                  </button>
+                  <button onClick={() => send("What are the recent recommendations from the curators I subscribe to?")} style={{ width: "100%", textAlign: "left", border: "none", background: "transparent", color: T.ink, padding: 0, fontFamily: F, fontSize: isDesktop ? 20 : 18, cursor: "pointer", display: "flex", alignItems: "center", gap: 18 }}>
+                    <span style={{ width: 30, height: 30, color: T.ink2, display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 6h16" /><path d="M4 12h16" /><path d="M4 18h10" /><circle cx="19" cy="18" r="1.5" /></svg>
+                    </span>
+                    <span>Show me new Recommendations</span>
+                  </button>
+                  <button onClick={() => setFeedbackSheetOpen(true)} style={{ width: "100%", textAlign: "left", border: "none", background: "transparent", color: T.ink2, padding: 0, fontFamily: F, fontSize: isDesktop ? 18 : 16, cursor: "pointer", display: feedbackSheetOpen ? "none" : "flex", alignItems: "center", gap: 18 }}>
+                    <span style={{ width: 30, height: 30, color: T.ink2, display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z" /></svg>
+                    </span>
+                    <span>Give feedback</span>
+                  </button>
                 </div>
               </div>
             )}
