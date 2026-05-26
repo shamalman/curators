@@ -51,13 +51,20 @@ function parseDomains(domainsText) {
     const nameMatch = headerLine.match(/\*\*([^(*]+)/)
     const name = nameMatch ? nameMatch[1].trim() : headerLine
 
-    const descLines = lines.slice(1).join(' ').trim()
-    const afterBold = headerLine.replace(/\*\*[^*]+\*\*/, '').trim()
+    // Description = everything after the bold name on the header line (the
+    // `**Name**: description` case, stripping the leading colon), joined with
+    // any subsequent lines (the `**Name**\ndescription` case). A header with
+    // no trailing text and no following lines yields an empty description.
+    const afterBold = headerLine
+      .replace(/\*\*[^*]+\*\*/, '')
+      .replace(/^\s*:\s*/, '')
+      .trim()
+    const restLines = lines.slice(1).join(' ').trim()
+    const description = [afterBold, restLines].filter(Boolean).join(' ').trim()
 
     domains.push({
       name,
-      headerRaw: headerLine.replace(/\*\*/g, '').trim(),
-      description: descLines || afterBold,
+      description,
     })
   }
 
@@ -183,11 +190,6 @@ export default function TasteFileView() {
               <div style={{ fontWeight: 600, fontSize: 14, color: T.ink, fontFamily: F }}>
                 {domain.name}
               </div>
-              {domain.headerRaw !== domain.name && (
-                <div style={{ fontSize: 11, color: T.acc, fontFamily: F, marginTop: 2 }}>
-                  {domain.headerRaw}
-                </div>
-              )}
               {domain.description && (
                 <div style={{ fontSize: 13, color: T.ink2, lineHeight: 1.5, fontFamily: F, marginTop: 4 }}>
                   {domain.description}
