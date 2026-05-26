@@ -20,7 +20,8 @@ export default function BottomTabs() {
     { id: "me", icon: "\u25A2", label: "Me", path: "/me", active: pathname.startsWith("/me") || (handle && pathname === "/" + handle), activeColor: T.acc },
     { id: "find", icon: "\u2316", label: "Find", path: "/find", active: pathname.startsWith("/find"), activeColor: T.acc },
     { id: "subs", icon: "\u2661", label: "Subs", path: "/subs", active: pathname.startsWith("/subs"), activeColor: T.acc },
-    ...(isShamal ? [{ id: "feedback", icon: "\u25CB", label: "Feedback", path: "/admin/feedback", active: pathname.startsWith("/admin/feedback"), activeColor: T.acc }] : []),
+    // Feedback nav hidden \u2014 route /admin/feedback still works directly
+    // ...(isShamal ? [{ id: "feedback", icon: "\u25CB", label: "Feedback", path: "/admin/feedback", active: pathname.startsWith("/admin/feedback"), activeColor: T.acc }] : []),
   ];
 
   return (

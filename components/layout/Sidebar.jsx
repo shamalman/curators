@@ -65,6 +65,7 @@ export default function Sidebar() {
 
       {/* Invite + Settings + Feedback (admin) */}
       <div style={{ padding: "8px 12px 16px", borderTop: `1px solid ${T.bdr}`, flexShrink: 0, display: "flex", flexDirection: "column", gap: 4 }}>
+        {/* Feedback nav hidden — route /admin/feedback still works directly
         {profile?.handle?.replace("@", "") === "shamal" && (
           <button
             onClick={() => router.push("/admin/feedback")}
@@ -88,6 +89,7 @@ export default function Sidebar() {
             <span>Feedback</span>
           </button>
         )}
+        */}
         <button
           onClick={() => router.push("/invite")}
           style={{
