@@ -499,15 +499,20 @@ If you cannot produce a clean 2-sentence response that satisfies all constraints
 
 
   const send = async (overrideMsg) => {
-    const msg = overrideMsg || input.trim();
+    const msg = typeof overrideMsg === "object" && overrideMsg !== null
+      ? (overrideMsg.message || "")
+      : (overrideMsg || input.trim());
+    const visibleMsg = typeof overrideMsg === "object" && overrideMsg !== null
+      ? (overrideMsg.displayText || msg)
+      : msg;
     if (!msg && !pendingImage) return;
     const imageToSend = pendingImage;
     const conversationId = await ensureLensConversation({
-      title: msg ? msg.slice(0, 80) : (imageToSend ? "Image conversation" : null),
+      title: visibleMsg ? visibleMsg.slice(0, 80) : (imageToSend ? "Image conversation" : null),
     });
     shouldScroll.current = true;
-    setMessages(m => [...m, { role: "user", text: msg || (imageToSend ? "[sent an image]" : ""), imagePreview: imageToSend?.previewUrl || null }]);
-    saveMsgToDb("user", msg || "[sent an image]", null, null, [], null, conversationId);
+    setMessages(m => [...m, { role: "user", text: visibleMsg || (imageToSend ? "[sent an image]" : ""), imagePreview: imageToSend?.previewUrl || null }]);
+    saveMsgToDb("user", visibleMsg || "[sent an image]", null, null, [], null, conversationId);
     setInput("");
     setPendingImage(null);
     setTyping(true);
@@ -1001,9 +1006,18 @@ If you cannot produce a clean 2-sentence response that satisfies all constraints
     startNewLensConversation?.();
   };
 
-  const prefillLensPrompt = (text) => {
-    setInput(text);
-    typedSinceSave.current = true;
+  const startRecommendationCoaching = () => {
+    send({
+      displayText: "Help me write a Recommendation",
+      message: `Help me write a Recommendation. Take the lead like a concise editor. First ask me for the thing I want to recommend, what kind of thing it is, and why it stuck with me. If I already provide a title, link, photo, or rough thought, turn it into a short Recommendation draft with:
+
+1. Title
+2. Category
+3. Why I recommend it
+4. Optional tags
+
+Keep it conversational. Ask one useful question at a time. Do not use em dashes.`,
+    });
   };
 
   // ── CURATOR CHAT ──
@@ -1054,14 +1068,16 @@ If you cannot produce a clean 2-sentence response that satisfies all constraints
             <div style={{ maxWidth: 700, margin: "0 auto", padding: "12px 16px" }}>
             <ErrorBoundary>
             {showLensCanvas && (
-              <div style={{ minHeight: isDesktop ? 360 : 300, display: "flex", flexDirection: "column", justifyContent: "center", padding: "24px 0 18px" }}>
-                <div style={{ fontFamily: S, fontSize: isDesktop ? 30 : 26, color: T.ink, lineHeight: 1.1, marginBottom: 10 }}>What would you like to do?</div>
-                <div style={{ fontFamily: F, fontSize: 14, color: T.ink3, lineHeight: 1.5, marginBottom: 18, maxWidth: 430 }}>Start a recommendation, shape an idea, or revisit your Record.</div>
-                <div style={{ display: "grid", gap: 8, width: "100%", maxWidth: 430 }}>
-                  <button onClick={() => setSheetOpen(true)} style={{ width: "100%", textAlign: "left", border: `1px solid ${T.acc}`, background: T.acc, color: T.accText, borderRadius: 14, padding: "13px 15px", fontFamily: F, fontSize: 14, fontWeight: 700, cursor: "pointer" }}>+ Recommendation</button>
-                  <button onClick={() => prefillLensPrompt("I want to talk through a recommendation before I save it")} style={{ width: "100%", textAlign: "left", border: `1px solid ${W.bdr}`, background: W.s, color: T.ink2, borderRadius: 14, padding: "13px 15px", fontFamily: F, fontSize: 14, cursor: "pointer" }}>Help me write a Recommendation</button>
-                  <button onClick={() => router.push('/me/taste')} style={{ width: "100%", textAlign: "left", border: `1px solid ${W.bdr}`, background: W.s, color: T.ink2, borderRadius: 14, padding: "13px 15px", fontFamily: F, fontSize: 14, cursor: "pointer" }}>Review my Record</button>
-                  <div style={{ paddingTop: 4 }}>
+              <div style={{ minHeight: isDesktop ? "calc(100vh - 300px)" : "calc(100vh - 250px)", display: "flex", flexDirection: "column", justifyContent: "flex-end", padding: isDesktop ? "72px 0 30px" : "44px 0 24px" }}>
+                <div style={{ marginBottom: isDesktop ? 34 : 26 }}>
+                  <div style={{ fontFamily: S, fontSize: isDesktop ? 30 : 26, color: T.ink, lineHeight: 1.1, marginBottom: 10 }}>What would you like to do?</div>
+                  <div style={{ fontFamily: F, fontSize: 14, color: T.ink3, lineHeight: 1.5, maxWidth: 430 }}>Start a recommendation, shape an idea, or revisit your Record.</div>
+                </div>
+                <div style={{ display: "grid", gap: 14, width: "100%", maxWidth: 430 }}>
+                  <button onClick={() => setSheetOpen(true)} style={{ width: "100%", textAlign: "left", border: `1px solid ${T.acc}`, background: T.acc, color: T.accText, borderRadius: 14, padding: "15px 16px", fontFamily: F, fontSize: 14, fontWeight: 700, cursor: "pointer" }}>+ Recommendation</button>
+                  <button onClick={startRecommendationCoaching} style={{ width: "100%", textAlign: "left", border: `1px solid ${W.bdr}`, background: W.s, color: T.ink2, borderRadius: 14, padding: "15px 16px", fontFamily: F, fontSize: 14, cursor: "pointer" }}>Help me write a Recommendation</button>
+                  <button onClick={() => router.push('/me/taste')} style={{ width: "100%", textAlign: "left", border: `1px solid ${W.bdr}`, background: W.s, color: T.ink2, borderRadius: 14, padding: "15px 16px", fontFamily: F, fontSize: 14, cursor: "pointer" }}>Review my Record</button>
+                  <div style={{ paddingTop: 2 }}>
                     <FeedbackChip
                       visible={!feedbackSheetOpen}
                       onTap={() => setFeedbackSheetOpen(true)}
