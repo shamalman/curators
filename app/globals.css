@@ -48,7 +48,8 @@ html, body, #__next {
 }
 
 body {
-  background: #131210;
+  /* Design-lab bridge: falls back to the production hex when no theme active. */
+  background: var(--cp-t-bg, #131210);
 }
 
 ::selection {
