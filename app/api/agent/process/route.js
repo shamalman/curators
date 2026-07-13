@@ -301,7 +301,7 @@ export async function POST(request) {
 
     const message = await anthropic.messages.create({
       // Using Sonnet for speed (60s Vercel timeout). Switch to claude-opus-4-20250514 on Vercel Pro.
-      model: "claude-sonnet-4-20250514",
+      model: "claude-sonnet-5",
       max_tokens: 4096,
       messages: [{ role: "user", content: prompt }],
     });

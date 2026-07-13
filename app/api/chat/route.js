@@ -572,7 +572,7 @@ The curator will choose what to do with it via the action buttons.
           }
         }
         const response = await anthropic.messages.create({
-          model: "claude-sonnet-4-20250514",
+          model: "claude-sonnet-5",
           max_tokens: 400,
           system: systemPrompt,
           messages: openingMessages,
@@ -813,7 +813,7 @@ ${tasteReadContent}
         }
       }
       response = await anthropic.messages.create({
-        model: "claude-sonnet-4-20250514",
+        model: "claude-sonnet-5",
         max_tokens: maxTokens,
         system: systemPrompt,
         messages: cleanedMessages,
@@ -859,7 +859,7 @@ ${tasteReadContent}
             }
           }
           response = await anthropic.messages.create({
-            model: "claude-sonnet-4-20250514",
+            model: "claude-sonnet-5",
             max_tokens: maxTokens,
             system: systemPrompt,
             messages: toolLoopMessages,
@@ -970,7 +970,7 @@ ${tasteReadContent}
           ];
 
           const inferResponse = await anthropic.messages.create({
-            model: "claude-sonnet-4-20250514",
+            model: "claude-sonnet-5",
             max_tokens: 400,
             system: `You are extracting recommendation metadata from an image a curator just shared. Respond with ONLY a JSON object, no prose, no markdown fences:\n{"title": "<short title, max 60 chars>", "category": "<one of: watch, listen, read, visit, get, wear, play, other>", "suggested_why": "<one sentence describing what makes this save-worthy, max 140 chars>"}\nIf the image is not save-worthy as a recommendation (e.g. a screenshot of an error, a blank image, a personal photo with no recommendation context), respond with: {"skip": true}`,
             messages: inferMessages,

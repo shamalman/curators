@@ -45,7 +45,7 @@ async function inferPasteMetadata(text) {
   try {
     const preview = text.slice(0, 3000); // cap input to Claude
     const response = await anthropic.messages.create({
-      model: "claude-sonnet-4-5-20250929",
+      model: "claude-sonnet-5",
       max_tokens: 400,
       messages: [
         {
